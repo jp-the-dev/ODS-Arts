@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
 import { BRAND, NAV_LINKS } from '@/constants'
@@ -8,12 +9,19 @@ import MobileMenuButton from '@/components/motion/MobileMenuButton'
 import Container from '@/components/layout/Container'
 
 export default function Navigation() {
+  const pathname = usePathname()
   const { scrollY } = useScroll()
   const [isScrolled, setIsScrolled] = useState(false)
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setIsScrolled(latest > 50)
   })
+
+  // Hide the top navigation entirely on the homepage since we use the FloatingNavigation orb there
+  // This MUST be after all hooks to prevent React from crashing
+  if (pathname === '/') {
+    return null
+  }
 
   const navLinks = NAV_LINKS.filter(link =>
     ['Collections', 'Custom Framing', 'Inspiration', 'About'].some(
@@ -23,14 +31,11 @@ export default function Navigation() {
 
   return (
     <motion.header
-      className={`fixed top-0 left-0 right-0 z-sticky transition-all duration-500 ease-luxury ${
+      className={`fixed top-0 left-0 right-0 z-[90] transition-all duration-500 ease-luxury ${
         isScrolled
           ? 'bg-ivory/90 backdrop-blur-nav border-b border-obsidian/8 py-3 shadow-sm'
           : 'bg-transparent border-b border-transparent py-5 md:py-6'
       }`}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
     >
       <Container size="full">
         <div className="flex items-center justify-between">
@@ -61,12 +66,12 @@ export default function Navigation() {
           {/* CTA + Mobile */}
           <div className="flex flex-1 justify-end items-center gap-4">
             <div className="hidden lg:block">
-              <a
+              <Link
                 href="/collections"
                 className="font-body text-[11px] uppercase tracking-[0.22em] text-obsidian border border-obsidian/25 hover:border-obsidian px-5 py-3 transition-all duration-300 hover:bg-obsidian hover:text-ivory"
               >
                 Explore Collection
-              </a>
+              </Link>
             </div>
             <MobileMenuButton />
           </div>

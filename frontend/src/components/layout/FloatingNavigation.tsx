@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ANIMATIONS } from '@/lib/config/animations'
 
@@ -19,28 +20,53 @@ const FOOTER_LINKS = [
 ]
 
 export default function FloatingNavigation() {
-  const [isVisible, setIsVisible] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-
-  // Show orb after scrolling down (e.g., 800px or 1.2 screen heights)
+  // ULTIMATE UNKILLABLE SCROLL TRACKER
   useEffect(() => {
-    const handleScroll = () => {
-      // Show after Hero + half of Brand Statement roughly
-      if (window.scrollY > window.innerHeight * 1.5) {
-        setIsVisible(true)
+    if (typeof window === 'undefined') return
+
+    const checkScroll = () => {
+      const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+      
+      // Bypassing React refs completely. Grab the exact DOM node from the browser.
+      const btn = document.getElementById('floating-navigation-orb')
+      if (!btn) return // Button not in DOM yet
+
+      if (isOpen) {
+        btn.style.opacity = '0'
+        btn.style.pointerEvents = 'none'
+        btn.style.transform = 'translate3d(0, 20px, 0) scale(0.75)'
+        return
+      }
+
+      if (currentScroll > 800) {
+        btn.style.opacity = '1'
+        btn.style.pointerEvents = 'auto'
+        btn.style.transform = 'translate3d(0, 0px, 0) scale(1)'
       } else {
-        setIsVisible(false)
-        // If they scroll back to top, maybe close it? Or just hide orb.
-        if (isOpen && window.scrollY < window.innerHeight) {
-          setIsOpen(false)
-        }
+        btn.style.opacity = '0'
+        btn.style.pointerEvents = 'none'
+        btn.style.transform = 'translate3d(0, 20px, 0) scale(0.75)'
       }
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    // Initial check
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
+    // 1. Check immediately
+    checkScroll()
+
+    // 2. Bind all events
+    window.addEventListener('scroll', checkScroll, { passive: true })
+    window.addEventListener('pageshow', checkScroll)
+    window.addEventListener('popstate', checkScroll)
+
+    // 3. Perpetual background sync (5x a second)
+    const intervalId = setInterval(checkScroll, 200)
+
+    return () => {
+      window.removeEventListener('scroll', checkScroll)
+      window.removeEventListener('pageshow', checkScroll)
+      window.removeEventListener('popstate', checkScroll)
+      clearInterval(intervalId)
+    }
   }, [isOpen])
 
   // Lock body scroll when drawer is open
@@ -58,26 +84,23 @@ export default function FloatingNavigation() {
   return (
     <>
       {/* ── The Floating Orb ── */}
-      <AnimatePresence>
-        {isVisible && !isOpen && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ duration: 0.5, ease: ANIMATIONS.ease.luxury }}
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] w-14 h-14 md:w-16 md:h-16 rounded-full bg-ivory text-obsidian flex items-center justify-center shadow-lg border border-obsidian/5 hover:scale-105 transition-transform duration-300"
-            aria-label="Open Navigation"
-          >
-            {/* Minimalist luxury icon */}
-            <span className="font-display-sc text-[10px] tracking-[0.2em] uppercase mt-[2px]">
-              ODS
-            </span>
-            {/* The outer ring */}
-            <div className="absolute inset-2 border-[0.5px] border-obsidian/20 rounded-full" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <button
+        id="floating-navigation-orb"
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] w-14 h-14 md:w-16 md:h-16 rounded-full bg-ivory text-obsidian flex items-center justify-center shadow-lg border border-obsidian/5 transition-all duration-500 ease-luxury focus:outline-none"
+        style={{
+          opacity: 0,
+          pointerEvents: 'none',
+          transform: 'translate3d(0, 20px, 0) scale(0.75)',
+          willChange: 'transform, opacity'
+        }}
+        aria-label="Open Navigation"
+      >
+        <span className="font-display-sc text-[10px] tracking-[0.2em] uppercase mt-[2px] hover:scale-105 transition-transform">
+          ODS
+        </span>
+        <div className="absolute inset-2 border-[0.5px] border-obsidian/20 rounded-full" />
+      </button>
 
       {/* ── The Luxury Drawer ── */}
       <AnimatePresence>
@@ -100,13 +123,13 @@ export default function FloatingNavigation() {
               animate={{ y: '0%' }}
               exit={{ y: '100%' }}
               transition={{ duration: 0.8, ease: ANIMATIONS.ease.luxury }}
-              className="relative w-full bg-ivory rounded-t-[2rem] md:rounded-t-[3rem] p-8 md:p-16 pointer-events-auto flex flex-col items-center shadow-2xl"
+              className="relative w-full bg-ivory rounded-t-[2rem] md:rounded-t-[3rem] pt-12 pb-[calc(3rem+env(safe-area-inset-bottom))] px-6 md:px-16 pointer-events-auto flex flex-col items-center shadow-2xl"
               style={{ maxHeight: '90vh' }}
             >
-              {/* Close Button */}
+              {/* Close Button - Increased touch target */}
               <button
                 onClick={() => setIsOpen(false)}
-                className="absolute top-8 right-8 md:top-12 md:right-12 w-12 h-12 flex flex-col items-center justify-center gap-1.5 group overflow-hidden"
+                className="absolute top-4 right-4 md:top-8 md:right-8 p-4 flex flex-col items-center justify-center gap-1.5 group overflow-hidden"
                 aria-label="Close Navigation"
               >
                 <div className="w-6 h-[1px] bg-obsidian/60 transform rotate-45 translate-y-[3.5px] transition-transform duration-500 group-hover:bg-obsidian group-hover:rotate-135" />
@@ -114,27 +137,30 @@ export default function FloatingNavigation() {
               </button>
 
               {/* Minimal Brand Mark */}
-              <div className="mb-12 md:mb-16 flex flex-col items-center gap-4">
+              <div className="mb-10 md:mb-16 flex flex-col items-center gap-4">
                 <span className="font-display text-2xl text-obsidian tracking-wider">◎</span>
                 <span className="font-body text-[10px] uppercase tracking-[0.4em] text-gold">Navigation</span>
               </div>
 
               {/* Sequential Menu Links */}
-              <nav className="flex flex-col items-center gap-6 md:gap-8 w-full max-w-md mb-16 overflow-y-auto">
+              <nav className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-md mb-12 overflow-y-auto pb-4 hide-scrollbar">
                 {MENU_ITEMS.map((item, i) => (
-                  <motion.a
+                  <motion.div
                     key={item.label}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.5, delay: 0.2 + (i * 0.05), ease: ANIMATIONS.ease.luxury }}
-                    className="group relative font-display text-[clamp(32px,4vw,48px)] leading-none text-obsidian tracking-[-0.01em]"
                   >
-                    <span className="relative z-10">{item.label}</span>
-                    <span className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-0 h-[1px] bg-walnut transition-all duration-500 group-hover:w-full" />
-                  </motion.a>
+                    <Link
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="group relative font-display text-[clamp(32px,4vw,48px)] leading-none text-obsidian tracking-[-0.01em] block py-3 px-6"
+                    >
+                      <span className="relative z-10">{item.label}</span>
+                      <span className="absolute left-1/2 -translate-x-1/2 bottom-1 w-0 h-[1px] bg-walnut transition-all duration-500 group-hover:w-[calc(100%-3rem)]" />
+                    </Link>
+                  </motion.div>
                 ))}
               </nav>
 

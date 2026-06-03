@@ -74,10 +74,36 @@ We are strictly following a cutting-edge, highly optimized frontend stack. All a
 *   **Floating Navigation Orb:** Replaced the sticky top navigation with a persistent, bottom-right circular orb (`◎ ODS`) that appears only after the user has absorbed the initial brand statement.
 *   **Luxury Drawer System:** Clicking the orb triggers a background blur and an elegant bottom-up drawer reveal with sequentially staggered menu items.
 
+### Phase 10: The Story Pages (`/about` & `/inspiration`) [COMPLETED]
+*   **The About Page:** Built `AboutHero.tsx` for a cinematic introduction and reused the highly-polished `CraftsmanshipSection.tsx` to detail the 4-step artisanal process.
+*   **The Inspiration Gallery:** Created a filterable masonry-style interior layout using Framer Motion's `layoutId` animations (`InspirationGallery.tsx`).
+*   **AI Lifestyle Assets:** Generated and implemented 4 hyper-realistic interior architecture renders representing minimal, warm, gallery, and workspace styles.
+
+### Phase 11: Explore Series — E-Commerce Product Page [COMPLETED]
+*   **Mock-First Service Architecture:** Established a `src/lib/types/product.ts` contract, `src/lib/mock/products.ts` data layer, and `src/lib/services/products.ts` routing layer. Flipping `NEXT_PUBLIC_USE_MOCK_DATA=false` in `.env.local` is the only change needed to switch to the real Laravel API.
+*   **Cart System:** Built a zero-dependency `CartProvider` (React Context + useReducer) with localStorage persistence. Structured so server-side cart sync can be added via a single `useEffect` when the backend is ready.
+*   **Product Zone — Multi-Frame Support:** Introduced `CollectionProductZone.tsx` (Client) with a `ProductSelector.tsx` horizontal scrollable rail so users can browse all N frames in a collection. The server fetches all products in a single call; the client manages selected state locally.
+*   **Mock Data:** 9 products total — 3 distinct frame profiles per collection (Walnut: Classic / Slim / Box Float. Gallery: Classic / Float / Ledge. Heritage: Grand / Slim / Noir).
+*   **Cart Drawer:** Slide-in animated `CartDrawer.tsx` with thumbnail, qty stepper, remove, subtotal, and checkout CTA stub.
+
+### Phase 12: Collections Index — Frame Grid with Price [COMPLETED]
+*   **Split Architecture:** Rebuilt `/collections/page.tsx` as a hybrid page. The top half is server-rendered editorial content (cinematic header + 3 collection bands). The bottom half is a Client Component `FrameGrid.tsx` that receives all 9 products from the server.
+*   **Instant Filtering & Sorting:** `FrameGrid` handles filtering (All/Walnut/Gallery/Heritage) and sorting (Price low/high) entirely in-memory using Framer Motion layout animations for seamless transitions. No extra API calls.
+*   **Premium Frame Card:** Built `FrameCard.tsx` with a 3:4 aspect ratio, hover scales, animated underlines, stock badges, and pricing ("from ₹X,XXX").
+*   **Deep-Linking:** Each frame card points to `/collections/[slug]?frame=[frame_slug]`. Updated `CollectionProductZone.tsx` to read the URL parameter and pre-select the specific frame profile when navigating to the collection detail page.
+
 ---
 
 ## 3. Pending Roadmap (What's Next)
 
-1.  **Mobile Menu Optimization:** The Floating Navigation Orb currently handles global routing perfectly. Ensure it is flawlessly optimized for mobile touch targets.
-2.  **Inner Pages — Collections Architecture:** Scaffold the `/collections` layout.
-3.  **Product Discovery:** Since products were removed from the homepage, the Collections page must handle the heavy lifting of product discovery and storytelling combined.
+### Phase 13: Cart & Checkout Pages
+**Goal:** The CartDrawer is live but `/cart` and `/checkout` pages are empty stubs. The cart page should be a full-page version of the drawer. The checkout page needs a form (name, address, size confirmation) — no payment gateway yet, just a form that would POST to the Laravel API.
+
+### Phase 14: Custom Framing Interactive Page (`/custom-framing`)
+**Goal:** The most complex page on the site. A step-by-step frame configurator (upload artwork → choose size → pick mat → pick frame → place order). This is a Client-heavy page.
+
+### Phase 15: Gifting Page (`/gifting`)
+**Goal:** A landing page for corporate and personal gifting, featuring curated gift sets, a gift-wrapping section, and a lead form.
+
+### Phase 16: Performance & SEO Polish
+**Goal:** Lighthouse audit, OG images, sitemap.ts, robots.ts, reduced motion support, and font loading optimization.

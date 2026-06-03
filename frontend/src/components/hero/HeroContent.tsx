@@ -1,12 +1,12 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, MotionValue } from 'framer-motion'
+import Link from 'next/link'
 import EyebrowLabel from '@/components/ui/EyebrowLabel'
 import Container from '@/components/layout/Container'
-import { ANIMATIONS } from '@/lib/config/animations'
 
 interface HeroContentProps {
-  y: any
+  y: MotionValue<number>
 }
 
 export default function HeroContent({ y }: HeroContentProps) {
@@ -53,19 +53,19 @@ export default function HeroContent({ y }: HeroContentProps) {
             className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 pt-3 animate-fade-up"
             style={{ animationDelay: '1000ms' }}
           >
-            <a
+            <Link
               href="/collections"
               className="inline-flex items-center justify-center gap-2.5 bg-ivory text-obsidian font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-gold hover:text-obsidian transition-colors duration-500"
             >
               Explore Collection
-            </a>
-            <a
+            </Link>
+            <Link
               href="/about"
               className="inline-flex items-center font-body text-[11px] uppercase tracking-[0.22em] transition-all duration-400 pb-[2px] border-b"
               style={{ color: 'rgba(245,240,232,0.6)', borderColor: 'rgba(245,240,232,0.28)' }}
             >
               Our Story
-            </a>
+            </Link>
           </div>
 
         </div>

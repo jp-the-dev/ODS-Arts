@@ -2,7 +2,7 @@
 // Assembles all homepage sections in order.
 // Server Component (default)
 // Reference: agents/09-homepage-wireframe.md
-
+import Link from 'next/link'
 import { HeroSection } from '@/components/hero'
 import FeaturedCollectionsSection from '@/components/sections/FeaturedCollectionsSection'
 import CraftsmanshipSection from '@/components/sections/CraftsmanshipSection'
@@ -48,7 +48,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-            <a
+            <Link
               href="/collections"
               className="inline-flex items-center gap-3 bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-walnut transition-colors duration-500"
             >
@@ -56,13 +56,13 @@ export default function HomePage() {
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
                 <path d="M1 7h12M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/about"
               className="font-body text-[11px] uppercase tracking-[0.22em] text-obsidian/45 hover:text-obsidian border-b border-obsidian/20 hover:border-obsidian pb-[2px] transition-all duration-300"
             >
               Our Craft
-            </a>
+            </Link>
           </div>
         </div>
 

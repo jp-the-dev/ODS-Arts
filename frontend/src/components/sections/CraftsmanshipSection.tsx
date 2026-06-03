@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import Image from 'next/image'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { ANIMATIONS } from '@/lib/config/animations'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
 
 const STEPS = [
   {
@@ -19,7 +19,7 @@ const STEPS = [
   {
     number: '03',
     title: 'Hand Finishing',
-    description: 'Every frame is sanded through progressive grits and finished by hand. Whether it’s a natural wax polish on walnut or hand-gilded gold leaf, the touch is entirely human.',
+    description: "Every frame is sanded through progressive grits and finished by hand. Whether it's a natural wax polish on walnut or hand-gilded gold leaf, the touch is entirely human.",
   },
   {
     number: '04',
@@ -28,23 +28,6 @@ const STEPS = [
   },
 ]
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2, delayChildren: 0.1 },
-  },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.9, ease: ANIMATIONS.ease.luxury },
-  },
-}
-
 export default function CraftsmanshipSection() {
   const imageContainerRef = useRef<HTMLDivElement>(null)
   
@@ -52,9 +35,16 @@ export default function CraftsmanshipSection() {
     target: imageContainerRef,
     offset: ['start end', 'end start'],
   })
-
-  // Smooth parallax for the workshop image
   const imageY = useTransform(scrollYProgress, [0, 1], [-80, 80])
+
+  // Direct DOM reveal refs — no React state, no timing issues
+  const titleRef = useScrollReveal({ threshold: 0.15 })
+  const step0Ref = useScrollReveal<HTMLDivElement>({ threshold: 0.08, delay: 0 })
+  const step1Ref = useScrollReveal<HTMLDivElement>({ threshold: 0.08, delay: 100 })
+  const step2Ref = useScrollReveal<HTMLDivElement>({ threshold: 0.08, delay: 200 })
+  const step3Ref = useScrollReveal<HTMLDivElement>({ threshold: 0.08, delay: 300 })
+
+  const stepRefs = [step0Ref, step1Ref, step2Ref, step3Ref]
 
   return (
     <section className="bg-ivory w-full relative pt-12 pb-32 md:pb-48">
@@ -76,18 +66,14 @@ export default function CraftsmanshipSection() {
               sizes="100vw"
               className="object-cover opacity-90"
             />
-            {/* Dark vignette to make the image feel more cinematic */}
             <div className="absolute inset-0 bg-gradient-to-t from-obsidian/40 via-transparent to-obsidian/10" />
           </motion.div>
         </div>
       </div>
 
       {/* ── 2. The Narrative Title ── */}
-      <motion.div 
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: false, amount: 0.2 }}
-        variants={itemVariants}
+      <div 
+        ref={titleRef}
         className="max-w-4xl mx-auto px-6 text-center mb-24 md:mb-32"
       >
         <div className="flex items-center justify-center gap-4 mb-8">
@@ -103,23 +89,17 @@ export default function CraftsmanshipSection() {
         </h2>
         
         <p className="font-body text-[clamp(15px,1.2vw,18px)] leading-[1.8] text-pewter-dark max-w-2xl mx-auto">
-          We don’t mass-produce. Every frame that leaves our studio is the result of meticulous human touch, blending centuries-old joinery techniques with modern archival standards.
+          We don&apos;t mass-produce. Every frame that leaves our studio is the result of meticulous human touch, blending centuries-old joinery techniques with modern archival standards.
         </p>
-      </motion.div>
+      </div>
 
       {/* ── 3. The 4 Steps (Editorial Layout) ── */}
       <div className="max-w-6xl mx-auto px-6">
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: false, amount: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-y-20 gap-x-16 lg:gap-x-32"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-20 gap-x-16 lg:gap-x-32">
           {STEPS.map((step, index) => (
-            <motion.div 
-              key={step.number} 
-              variants={itemVariants}
+            <div 
+              key={step.number}
+              ref={stepRefs[index]}
               className={`flex flex-col ${index % 2 === 1 ? 'md:mt-32' : ''}`}
             >
               <div className="flex items-end gap-6 mb-8 border-b border-gold/20 pb-6">
@@ -133,9 +113,9 @@ export default function CraftsmanshipSection() {
               <p className="font-body text-[15px] leading-[1.8] text-pewter-dark max-w-sm">
                 {step.description}
               </p>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
 
     </section>

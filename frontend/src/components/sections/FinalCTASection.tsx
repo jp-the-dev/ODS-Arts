@@ -2,8 +2,9 @@
 
 import { useRef } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { ANIMATIONS } from '@/lib/config/animations'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
 
 export default function FinalCTASection() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -12,9 +13,12 @@ export default function FinalCTASection() {
     target: containerRef,
     offset: ['start end', 'end start'],
   })
-
-  // Slow subtle parallax for the image
   const imageY = useTransform(scrollYProgress, [0, 1], [-60, 60])
+
+  // Direct DOM reveal refs — synchronous, no React state timing issues
+  const titleRef = useScrollReveal({ threshold: 0.2 })
+  const imageRef = useScrollReveal<HTMLDivElement>({ threshold: 0.1, duration: 1500, delay: 100 })
+  const ctaRef = useScrollReveal<HTMLDivElement>({ threshold: 0.3, delay: 200 })
 
   return (
     <section 
@@ -24,13 +28,7 @@ export default function FinalCTASection() {
       <div className="max-w-6xl mx-auto px-6 flex flex-col items-center text-center">
         
         {/* ── Editorial Title ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.3 }}
-          transition={{ duration: 1, ease: ANIMATIONS.ease.luxury }}
-          className="mb-16 md:mb-24"
-        >
+        <div ref={titleRef} className="mb-16 md:mb-24">
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="h-[1px] w-8 bg-gold/50" />
             <span className="font-body text-[10px] uppercase tracking-[0.3em] text-gold">
@@ -46,14 +44,11 @@ export default function FinalCTASection() {
           <p className="font-body text-[clamp(15px,1.2vw,18px)] leading-[1.8] text-pewter-dark max-w-lg mx-auto">
             Your most meaningful moments deserve a permanent place in your home.
           </p>
-        </motion.div>
+        </div>
 
         {/* ── Visual Anchor ── */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 1.5, ease: ANIMATIONS.ease.luxury }}
+        <div
+          ref={imageRef}
           className="w-full max-w-3xl aspect-[4/5] md:aspect-[16/9] relative mb-20 md:mb-32 overflow-hidden"
         >
           <motion.div 
@@ -68,25 +63,18 @@ export default function FinalCTASection() {
               className="object-cover"
             />
           </motion.div>
-        </motion.div>
+        </div>
 
         {/* ── Single CTA ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.5 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: ANIMATIONS.ease.luxury }}
-        >
-          <a
+        <div ref={ctaRef}>
+          <Link
             href="/collections"
-            className="group relative inline-flex items-center justify-center bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.25em] px-12 py-5 overflow-hidden"
+            className="group inline-flex items-center gap-4 bg-obsidian text-ivory px-8 py-5 font-body text-[11px] uppercase tracking-[0.2em] hover:bg-walnut transition-colors duration-500"
           >
-            <span className="relative z-10 transition-colors duration-500 group-hover:text-gold">
-              Explore Collections
-            </span>
-            <div className="absolute inset-0 bg-walnut transform scale-x-0 origin-left transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100" />
-          </a>
-        </motion.div>
+            <span>Explore Collections</span>
+            <div className="w-8 h-[1px] bg-gold/50 group-hover:w-12 transition-all duration-500" />
+          </Link>
+        </div>
 
       </div>
     </section>

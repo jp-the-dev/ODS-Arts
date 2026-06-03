@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 interface EyebrowLabelProps {
   children: React.ReactNode
-  color?: 'gold' | 'pewter' | 'ivory'
+  color?: 'gold' | 'pewter' | 'ivory' | 'obsidian'
   className?: string
 }
 
@@ -15,6 +15,7 @@ export default function EyebrowLabel({
     gold: 'text-gold',
     pewter: 'text-pewter',
     ivory: 'text-ivory',
+    obsidian: 'text-obsidian',
   }
 
   return (
