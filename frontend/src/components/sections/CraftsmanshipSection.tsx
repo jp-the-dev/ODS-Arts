@@ -85,7 +85,8 @@ export default function CraftsmanshipSection() {
       {/* ── 2. The Narrative Title ── */}
       <motion.div 
         initial="hidden"
-        animate="visible"
+        whileInView="visible"
+        viewport={{ once: false, amount: 0.2 }}
         variants={itemVariants}
         className="max-w-4xl mx-auto px-6 text-center mb-24 md:mb-32"
       >
@@ -111,7 +112,8 @@ export default function CraftsmanshipSection() {
         <motion.div 
           variants={containerVariants}
           initial="hidden"
-          animate="visible"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.1 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-y-20 gap-x-16 lg:gap-x-32"
         >
           {STEPS.map((step, index) => (

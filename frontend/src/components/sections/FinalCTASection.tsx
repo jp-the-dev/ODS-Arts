@@ -26,7 +26,8 @@ export default function FinalCTASection() {
         {/* ── Editorial Title ── */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.3 }}
           transition={{ duration: 1, ease: ANIMATIONS.ease.luxury }}
           className="mb-16 md:mb-24"
         >
@@ -50,7 +51,8 @@ export default function FinalCTASection() {
         {/* ── Visual Anchor ── */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 1.5, ease: ANIMATIONS.ease.luxury }}
           className="w-full max-w-3xl aspect-[4/5] md:aspect-[16/9] relative mb-20 md:mb-32 overflow-hidden"
         >
@@ -71,7 +73,8 @@ export default function FinalCTASection() {
         {/* ── Single CTA ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.5 }}
           transition={{ duration: 0.8, delay: 0.2, ease: ANIMATIONS.ease.luxury }}
         >
           <a

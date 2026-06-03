@@ -75,7 +75,8 @@ export default function CollectionStoryBlock({
       ref={containerRef}
       variants={blockVariants}
       initial="hidden"
-      animate="visible"
+      whileInView="visible"
+      viewport={{ once: false, amount: 0.15 }}
       className={`flex flex-col ${isImageRight ? 'md:flex-row-reverse' : 'md:flex-row'} items-center gap-16 md:gap-24 lg:gap-32 w-full py-16 md:py-32`}
     >
       

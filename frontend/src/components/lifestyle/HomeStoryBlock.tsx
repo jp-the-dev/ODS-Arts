@@ -48,7 +48,8 @@ export default function HomeStoryBlock({
       {/* ── Magazine-style Image Container ── */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: false, amount: 0.15 }}
         transition={{ duration: 1.2, ease: ANIMATIONS.ease.luxury }}
         className="w-full max-w-[1200px] aspect-[4/3] md:aspect-[16/9] relative overflow-hidden bg-ivory-200 mb-12 md:mb-16"
       >
@@ -69,8 +70,10 @@ export default function HomeStoryBlock({
       {/* ── Editorial Story Caption ── */}
       <motion.div 
         initial="hidden"
-        animate="visible"
+        whileInView="visible"
+        viewport={{ once: false, amount: 0.2 }}
         variants={{
+          hidden: {},
           visible: { transition: { staggerChildren: 0.15 } }
         }}
         className="w-full max-w-2xl px-6 flex flex-col md:flex-row md:items-start justify-between gap-8 md:gap-16"
