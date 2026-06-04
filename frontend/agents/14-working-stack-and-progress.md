@@ -9,101 +9,183 @@
 We are strictly following a cutting-edge, highly optimized frontend stack. All architectural decisions prioritize performance (LCP/CLS), cinematic animations, and developer experience.
 
 ### Core Frameworks
-*   **Next.js (App Router):** Using the latest Next.js architecture (v16.2.6 Turbopack) for server-side rendering, streaming, and advanced routing.
-*   **React 19+:** Leveraging Server Components by default. We only use `'use client'` boundaries where interactivity (framer-motion, refs, event listeners) is strictly required.
-*   **TypeScript:** Strict typing across the codebase to ensure robust prop passing and data structures.
+*   **Next.js (App Router):** v16.2.6 Turbopack — SSR, streaming, and App Router with route groups `(marketing)` and `(shop)`.
+*   **React 19+:** Server Components by default. `'use client'` only where strictly required (Framer Motion, refs, event listeners, state).
+*   **TypeScript:** Strict typing across the entire codebase.
 
 ### Styling & UI
-*   **Tailwind CSS v4:** We are using the newest Tailwind v4 architecture. All design tokens (colors, typography, spacing) are mathematically defined in the `@theme` block within `src/app/globals.css`. We do *not* use a `tailwind.config.ts` file, as v4 handles this natively in CSS.
-*   **Framer Motion:** The dedicated engine for all complex scroll parallax, spring physics, and interactive transitions.
-*   **Native CSS Animations:** For initial page load (Above-The-Fold) animations, we strictly use pure Tailwind CSS keyframes (`animate-fade-up`) to bypass React/Framer caching bugs during route navigation.
+*   **Tailwind CSS v4:** All design tokens (colors, typography, spacing, animations) defined in `@theme {}` inside `src/app/globals.css`. **No `tailwind.config.ts`** — v4 handles this natively in CSS.
+*   **Framer Motion 12:** For parallax (`useScroll` + `useTransform`), hover effects (`whileHover`), and drawer/modal transitions (`AnimatePresence`).
+*   **Native CSS Animations:** For above-the-fold entry animations (`animate-fade-up`) to bypass Next.js back-navigation hydration bugs.
+*   **`useScrollReveal` hook:** Direct DOM style mutation via `IntersectionObserver` — the only safe scroll-reveal pattern for Next.js App Router (see `agents/issues-and-resolutions.md`).
 
 ### Architecture Structure
-*   **`src/` Directory Setup:** We enforce a clean separation of concerns:
-    *   `src/app/`: Next.js routing, layouts, and page shells.
-    *   `src/components/`: Modular UI pieces separated by feature (`hero/`, `layout/`, `collections/`, `sections/`, `ui/`).
-    *   `src/lib/`: Configuration files (`theme.ts`, `animations.ts`, `fonts.ts`).
-    *   `src/constants/`: Static copy and global data.
+
+```
+src/
+├── app/                        ← Next.js App Router
+│   ├── (marketing)/            ← Public pages: /, /collections, /about, /inspiration, etc.
+│   ├── (shop)/                 ← Transactional pages: /cart, /checkout
+│   ├── api/                    ← Route handlers: /api/contact, /api/newsletter
+│   └── globals.css             ← Tailwind v4 @theme tokens (single source of truth)
+│
+├── components/                 ← UI — grouped by feature
+│   ├── cart/                   ← CartPageItems, CartOrderSummary
+│   ├── checkout/               ← CheckoutForm, CheckoutOrderSummary
+│   ├── collections/            ← CollectionStoryBlock
+│   ├── hero/                   ← HeroSection, HeroContent, HeroVideo, HeroReveal, etc.
+│   ├── layout/                 ← Navigation, Footer, CartDrawer, FloatingNavigation, Container
+│   ├── lifestyle/              ← HomeStoryBlock
+│   ├── motion/                 ← All Framer Motion client wrappers (FadeUp, ParallaxImage, etc.)
+│   ├── product/                ← ProductConfigurator, FrameCard, FrameGrid, CollectionProductZone, etc.
+│   ├── sections/               ← All homepage sections (FeaturedCollections, Craftsmanship, etc.)
+│   └── ui/                     ← Atoms: Button, GoldRule, EyebrowLabel, SectionHeader, etc.
+│
+├── lib/                        ← Shared utilities — primarily the e-commerce data layer
+│   ├── api/client.ts           ← apiFetch() — typed fetch wrapper used by all services
+│   ├── config/                 ← animations.ts, theme.ts, breakpoints.ts, seo.ts
+│   ├── data/collections.ts     ← Static editorial collection data (used by marketing pages)
+│   ├── fonts.ts                ← next/font/google instances (Cormorant + Jost)
+│   ├── mock/products.ts        ← 9 mock products (3 collections × 3 frame profiles)
+│   ├── services/products.ts    ← Mock-aware product service (getProductsByCollection, etc.)
+│   ├── store/cart.tsx          ← CartProvider (Context + useReducer + localStorage)
+│   ├── types/product.ts        ← Rich e-commerce types: Product, Variant, Finish, CartItem
+│   └── utils.ts                ← cn(), formatPrice(), truncate()
+│
+├── services/                   ← API service layer (real API calls via apiFetch)
+│   ├── collections.service.ts  ← getCollections(), getCollectionBySlug() [scaffolded, ready]
+│   ├── orders.service.ts       ← placeOrder(), buildOrderRequest() [mock-aware]
+│   ├── products.service.ts     ← getProducts(), getProductBySlug() [scaffolded, ready]
+│   └── testimonials.service.ts ← getTestimonials() [scaffolded, ready]
+│
+├── types/
+│   └── index.ts                ← Editorial types: Product, Collection, Testimonial, PlaceOrderRequest
+│
+├── constants/index.ts          ← BRAND, COLORS, NAV_LINKS, PROCESS_STEPS
+└── hooks/useScrollReveal.ts    ← IO-based direct DOM scroll reveal (back-nav safe)
+```
+
+### Known Architecture Patterns (Critical Rules)
+
+> **Scroll Reveal:** NEVER use `whileInView` or `initial+animate` for section reveals — both break on Next.js back-navigation. Use `useScrollReveal` hook only.
+
+> **Internal Links:** NEVER use `<a>` tags. Always use `<Link>` from `next/link`. Plain anchors break React hydration on back-navigation (Bfcache issue).
+
+> **Framer Motion is SAFE for:** `useScroll + useTransform` (parallax), `whileHover`, `AnimatePresence` (drawers/modals).
+
+> **Mock vs Real API:** Set `NEXT_PUBLIC_USE_MOCK_DATA=false` in `.env.local` to switch the entire data layer from mock to Laravel API. No UI code changes required.
 
 ---
 
 ## 2. Frontend Development Progress
 
 ### Phase 1: Theme & Foundation [COMPLETED]
-*   **Visual Direction Shift:** Transitioned the brand from a dark, moody aesthetic to a **Luxury Ivory / White Jet** editorial look.
-*   **Design Token Implementation:** Mapped the entire color palette (Ivory surfaces, Obsidian text, Walnut accents, Gold rules) into `globals.css` and documented the logic in `agents/08-tailwind-tokens.md`.
-*   **Typography System:** Implemented Google Fonts (Cormorant & Jost) seamlessly via `next/font`. Established a fluid, clamp-based type scale for perfect responsiveness across all devices.
-*   **Hydration Fixes:** Added `suppressHydrationWarning` to the root layout to protect against third-party browser extensions (like dark mode enforcers).
+*   Transitioned from dark moody to **Luxury Ivory / White Jet** editorial aesthetic.
+*   Full design token system in `globals.css` (`@theme {}`) — colors, typography, spacing, animations.
+*   Google Fonts (Cormorant + Jost) via `next/font`. Fluid clamp-based type scale.
+*   `suppressHydrationWarning` on root layout.
 
 ### Phase 2: Core Layout [COMPLETED]
-*   **Global Navigation:** Built a responsive, fixed navigation bar.
-    *   Starts completely transparent over the hero image.
-    *   Transitions to an elegant frosted-glass ivory (`bg-ivory/90` with `backdrop-blur`) when scrolled down.
+*   Responsive fixed Navigation bar — transparent over hero → frosted-glass ivory on scroll.
+*   Footer with newsletter form.
 
-### Phase 3: Screen 1 — The Hero [COMPLETED]
-*   **Cinematic LCP:** Implemented a full-bleed luxury marble image as the Largest Contentful Paint.
-*   **Centre Scrim Overlay:** Engineered a CSS radial-gradient that places a warm, dark shadow *only* behind the text, allowing the ivory typography to pop while keeping the image edges pristine.
-*   **Ivory Bloom Parallax:** Instead of fading the image out, we built an elegant scroll-driven effect where a solid ivory overlay slowly swallows the image as you scroll down, creating a seamless transition into Section 2.
-*   **Bulletproof Entry Animations:** Removed `framer-motion` from the initial text load, replacing it with staggered CSS `animate-fade-up` delays to permanently fix Next.js back-navigation bugs.
+### Phase 3: Screen 1 — Hero [COMPLETED]
+*   Full-bleed luxury marble image as LCP.
+*   CSS radial-gradient scrim behind text.
+*   Ivory Bloom parallax — ivory overlay swallows the image on scroll.
+*   Staggered CSS `animate-fade-up` entry animations (back-nav safe).
 
 ### Phase 4: Screen 2 — Brand Statement [COMPLETED]
-*   **Editorial Manifesto:** Implemented a large, oversized typographic statement ("*Every frame tells a story worth keeping*") with walnut italic accents.
-*   **Three Pillars Grid:** Designed a clean, 3-column layout outlining the core brand values (Handcrafted, Premium Materials, Made to Last).
-*   **Material Tag Strip:** Built a minimal showcase of physical materials (Walnut, Oak, Brass, Museum Glass) separated by delicate gold dots.
-*   **Pull Quote:** Added a massive, editorial-style blockquote to close the section.
+*   Large editorial manifesto quote with walnut italic accents.
+*   3-column pillars grid (Handcrafted, Premium Materials, Made to Last).
+*   Material tag strip (Walnut, Oak, Brass, Museum Glass).
+*   Editorial pull quote blockquote.
 
 ### Phase 5: Screen 3 — Featured Collections [COMPLETED]
-*   **Anti-Ecommerce Layout:** Built the collections section to feel like a high-end magazine spread rather than a traditional product grid (no prices, no standard cards).
-*   **CollectionStoryBlock Component:** Engineered an alternating layout (`Image Left` → `Image Right` → `Image Left`) that gracefully stacks on mobile devices.
-*   **Generated Assets:** Automatically generated and integrated 3 hyper-realistic museum-quality images (Walnut, Gallery, Heritage) to populate the section.
-*   **Scroll-Triggered Motion:** Implemented `whileInView` framer-motion reveals with staggered text entry and a subtle, luxurious vertical parallax drift on the images themselves.
+*   Anti-ecommerce magazine-spread layout.
+*   `CollectionStoryBlock.tsx` — alternating image left/right layout.
+*   3 AI-generated museum-quality images (Walnut, Gallery, Heritage).
+*   `useScrollReveal` scroll-triggered reveals + parallax image drift.
 
 ### Phase 6: Screen 4 — Craftsmanship [COMPLETED]
-*   **The Workshop Narrative:** Implemented an editorial layout to justify the premium price point by focusing entirely on the physical creation process.
-*   **Cinematic Parallax Header:** Generated a hyper-realistic workshop image (`public/images/craft/workshop.png`) and mounted it in an oversized container with a slow, heavy parallax drift.
-*   **Staggered Masonry Layout:** Built the 4-step process (Material Selection, Precision Cutting, Hand Finishing, Final Inspection) using a staggered editorial grid rather than a traditional timeline or card layout.
+*   Workshop editorial layout with cinematic parallax header image.
+*   4-step staggered masonry grid (Material Selection → Final Inspection).
 
-### Phase 7: Screen 5 — Living With ODSArts (Customer Homes) [COMPLETED]
-*   **Anti-Social-Media Layout:** Rejected the generic masonry/Instagram grid in favor of a full-bleed editorial layout (stacked blocks).
-*   **Lifestyle Selling:** Generated 3 luxury interior renders (Ahmedabad living room, Surat gallery wall, Mumbai creative studio) and mounted them in massive parallax containers.
-*   **Story-Driven Captions:** Each block uses a delicate typography lockup (Space Name, Location, Client) alongside an italicized editorial caption to focus on the emotional value of the space.
+### Phase 7: Screen 5 — Customer Homes [COMPLETED]
+*   Full-bleed editorial lifestyle blocks (Ahmedabad, Surat, Mumbai).
+*   Story-driven captions with Space Name, Location, Client lockup.
 
-### Phase 8: Screen 6 — The Final Editorial Ending [COMPLETED]
-*   **The Paradigm Shift:** Explicitly abandoned the standard ecommerce "Testimonials -> Best Sellers -> Footer" flow to maintain the high-end luxury editorial aesthetic.
-*   **Final CTA:** Built `FinalCTASection.tsx` ending the page on a powerful emotional note ("Preserve What Matters") with a massive solitary walnut frame and a single CTA to "Explore Collections".
-*   **Floating Navigation Orb:** Replaced the sticky top navigation with a persistent, bottom-right circular orb (`◎ ODS`) that appears only after the user has absorbed the initial brand statement.
-*   **Luxury Drawer System:** Clicking the orb triggers a background blur and an elegant bottom-up drawer reveal with sequentially staggered menu items.
+### Phase 8: Screen 6 — Final Editorial CTA [COMPLETED]
+*   `FinalCTASection.tsx` — "Preserve What Matters" + single CTA.
+*   Floating Navigation Orb (bottom-right, appears after scroll > 800px).
+*   Luxury bottom-up drawer with staggered menu items + backdrop blur.
 
-### Phase 10: The Story Pages (`/about` & `/inspiration`) [COMPLETED]
-*   **The About Page:** Built `AboutHero.tsx` for a cinematic introduction and reused the highly-polished `CraftsmanshipSection.tsx` to detail the 4-step artisanal process.
-*   **The Inspiration Gallery:** Created a filterable masonry-style interior layout using Framer Motion's `layoutId` animations (`InspirationGallery.tsx`).
-*   **AI Lifestyle Assets:** Generated and implemented 4 hyper-realistic interior architecture renders representing minimal, warm, gallery, and workspace styles.
+### Phase 10: Story Pages (`/about` & `/inspiration`) [COMPLETED]
+*   `AboutHero.tsx` + reused `CraftsmanshipSection.tsx`.
+*   `InspirationGallery.tsx` — filterable masonry layout with Framer Motion `layoutId`.
+*   4 AI-generated interior renders (minimal, warm, gallery, workspace).
 
-### Phase 11: Explore Series — E-Commerce Product Page [COMPLETED]
-*   **Mock-First Service Architecture:** Established a `src/lib/types/product.ts` contract, `src/lib/mock/products.ts` data layer, and `src/lib/services/products.ts` routing layer. Flipping `NEXT_PUBLIC_USE_MOCK_DATA=false` in `.env.local` is the only change needed to switch to the real Laravel API.
-*   **Cart System:** Built a zero-dependency `CartProvider` (React Context + useReducer) with localStorage persistence. Structured so server-side cart sync can be added via a single `useEffect` when the backend is ready.
-*   **Product Zone — Multi-Frame Support:** Introduced `CollectionProductZone.tsx` (Client) with a `ProductSelector.tsx` horizontal scrollable rail so users can browse all N frames in a collection. The server fetches all products in a single call; the client manages selected state locally.
-*   **Mock Data:** 9 products total — 3 distinct frame profiles per collection (Walnut: Classic / Slim / Box Float. Gallery: Classic / Float / Ledge. Heritage: Grand / Slim / Noir).
-*   **Cart Drawer:** Slide-in animated `CartDrawer.tsx` with thumbnail, qty stepper, remove, subtotal, and checkout CTA stub.
+### Phase 11: E-Commerce Product Pages [COMPLETED]
+*   Mock-first service architecture: `lib/types/product.ts` → `lib/mock/products.ts` → `lib/services/products.ts`.
+*   `CartProvider` — React Context + useReducer + localStorage persistence.
+*   `CollectionProductZone.tsx` — horizontal scrollable frame selector rail.
+*   9 mock products: Walnut (Classic/Slim/Box Float), Gallery (Classic/Float/Ledge), Heritage (Grand/Slim/Noir).
+*   `CartDrawer.tsx` — slide-in animated drawer with qty stepper, remove, subtotal.
+*   `ProductConfigurator.tsx` — size grid, finish swatches, qty, add-to-cart, accordion details.
 
-### Phase 12: Collections Index — Frame Grid with Price [COMPLETED]
-*   **Split Architecture:** Rebuilt `/collections/page.tsx` as a hybrid page. The top half is server-rendered editorial content (cinematic header + 3 collection bands). The bottom half is a Client Component `FrameGrid.tsx` that receives all 9 products from the server.
-*   **Instant Filtering & Sorting:** `FrameGrid` handles filtering (All/Walnut/Gallery/Heritage) and sorting (Price low/high) entirely in-memory using Framer Motion layout animations for seamless transitions. No extra API calls.
-*   **Premium Frame Card:** Built `FrameCard.tsx` with a 3:4 aspect ratio, hover scales, animated underlines, stock badges, and pricing ("from ₹X,XXX").
-*   **Deep-Linking:** Each frame card points to `/collections/[slug]?frame=[frame_slug]`. Updated `CollectionProductZone.tsx` to read the URL parameter and pre-select the specific frame profile when navigating to the collection detail page.
+### Phase 12: Collections Index [COMPLETED]
+*   `/collections/page.tsx` — hybrid server (editorial header) + client (`FrameGrid.tsx`).
+*   `FrameGrid.tsx` — in-memory filtering (All/Walnut/Gallery/Heritage) + sorting with Framer Motion layout animations.
+*   `FrameCard.tsx` — 3:4 aspect ratio, hover scale, animated underlines, stock badges, pricing.
+*   Deep-linking: `/collections/[slug]?frame=[frame_slug]` pre-selects frame on collection detail.
+
+### Phase 13: Cart & Checkout Pages [COMPLETED]
+*   **CartProvider moved to root `layout.tsx`** — now accessible to both `(marketing)` and `(shop)` route groups.
+*   **`(shop)/layout.tsx`** — minimal checkout-style nav (logo, back link, secure badge). Ivory background, clean checkout experience.
+*   **`/cart` page** — full-page 2-column layout (items left, sticky order summary right). Animated item removal, qty stepper, editorial empty state.
+*   **`/checkout` page** — 3-section luxury form (Contact / Delivery Address / Order Confirmation) + client-side validation + success screen with animated gold checkmark + order reference number.
+*   **`services/orders.service.ts`** — mock-aware order service (`placeOrder()`, `buildOrderRequest()`). Flip `NEXT_PUBLIC_USE_MOCK_DATA=false` to go live with Laravel `POST /orders`.
+*   **`types/index.ts`** — added `PlaceOrderRequest`, `PlaceOrderResponse`, `OrderStatus` types matching Laravel API contract.
+*   **Hydration fix:** `FloatingNavigation.tsx` — removed conflicting inline `style` props that caused SSR/client mismatch. Added `useLayoutEffect` for synchronous initial hidden state.
 
 ---
 
-## 3. Pending Roadmap (What's Next)
+## 3. Completed Phases (cont.)
 
-### Phase 13: Cart & Checkout Pages
-**Goal:** The CartDrawer is live but `/cart` and `/checkout` pages are empty stubs. The cart page should be a full-page version of the drawer. The checkout page needs a form (name, address, size confirmation) — no payment gateway yet, just a form that would POST to the Laravel API.
+### Phase 14: Custom Framing Configurator (`/custom-framing`) [COMPLETED]
+*   **Full-screen dark studio mode** — warm charcoal `#1C1916` / `#231F1B` split layout. Left panel sticky live preview, right panel animated wizard steps.
+*   **Split layout:** 45% left = live CSS frame preview. 55% right = step-by-step form. On mobile, preview collapses above steps.
+*   **`types.ts`** — `FramingConfig` extracted into a dedicated types file to prevent circular imports between the wizard orchestrator and step components.
+*   **`FramePreview.tsx`** — Live CSS-only frame mockup. Frame material = CSS gradient border. Mat = padding + background-color. Aspect ratio = CSS `aspect-ratio` property. Updates in real time as user picks each option. No images needed.
+*   **`StepProgressBar.tsx`** — Gold gradient fill bar (`scaleX` animation) + clickable step labels. Completed steps clickable to go back.
+*   **`StepOptionChip.tsx`** — Fully interactive chip: gold gradient background + glowing border on selected, hover lift (`y: -1, scale: 1.015`), animated gold left-bar, shimmer on hover.
+*   **Step 1 — Artwork:** Drag-drop upload zone with FileReader preview. Gold border on hover. Artwork shown live inside the frame preview. "Skip" option.
+*   **Step 2 — Size:** 7 standard presets + custom W×H inputs + cm/inch unit toggle. Live aspect ratio update in preview.
+*   **Step 3 — Mat:** 4 style chips (None/Single/Double/Museum) + 8 colour swatches (animated gold ring on selected) + 3 width chips. Sub-options animate in.
+*   **Step 4 — Frame:** 4 material cards with CSS gradient swatch strips + hover lift + gold glow on selected. Finish colour circles (3 per material) + 4 profile chips appear after material selection. Price estimate from hardcoded lookup table.
+*   **Step 5 — Review & Request:** Full config summary card + contact form (name, email, phone, notes) + animated gold checkmark success screen with `CFR-XXXXXX` quote reference.
+*   **`services/customFraming.service.ts`** — mock-aware `placeQuoteRequest()`. Flip `NEXT_PUBLIC_USE_MOCK_DATA=false` → POSTs to `POST /custom-framing/quotes`. Zero UI changes.
+*   **`types/index.ts`** — added `CustomFramingQuoteRequest` and `CustomFramingQuoteResponse` types matching Laravel API contract.
+*   **Step transitions:** Framer Motion `AnimatePresence` with directional x-axis slide (forward = right→left, back = left→right). Each step's content stagger-reveals after slide completes.
+*   **Bug fix:** `opengraph-image.tsx` was returning HTTP 400 — fixed by providing a proper sized root div with explicit `width`/`height` to `ImageResponse`.
 
-### Phase 14: Custom Framing Interactive Page (`/custom-framing`)
-**Goal:** The most complex page on the site. A step-by-step frame configurator (upload artwork → choose size → pick mat → pick frame → place order). This is a Client-heavy page.
+---
 
-### Phase 15: Gifting Page (`/gifting`)
-**Goal:** A landing page for corporate and personal gifting, featuring curated gift sets, a gift-wrapping section, and a lead form.
+## 4. Pending Roadmap
+
+### Phase 15: Gifting Page (`/gifting`) [NEXT]
+**Goal:** Editorial landing page — gifting hero, 3 curated gift sets, corporate gifting section with lead form, gift process timeline.
 
 ### Phase 16: Performance & SEO Polish
-**Goal:** Lighthouse audit, OG images, sitemap.ts, robots.ts, reduced motion support, and font loading optimization.
+**Goal:** Lighthouse audit, OG images, sitemap, robots, reduced-motion support, accessibility pass, font loading optimisation.
+
+## 4. Backend Integration Checklist (When Laravel is Ready)
+
+| What | How |
+|---|---|
+| Product data (real) | Set `NEXT_PUBLIC_USE_MOCK_DATA=false` — `lib/services/products.ts` auto-switches |
+| Order submission | Same flag — `services/orders.service.ts` routes to `POST /orders` |
+| Cart server sync | Add `useEffect` in `CartProvider` calling `GET /cart` on mount + `POST /cart/sync` on mutation |
+| Newsletter | Wire `src/app/api/newsletter/route.ts` to Laravel endpoint |
+| Contact form | Wire `src/app/api/contact/route.ts` to Laravel endpoint |
+| Collections/Testimonials | `src/services/collections.service.ts` + `testimonials.service.ts` are scaffolded and ready |

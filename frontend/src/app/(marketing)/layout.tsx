@@ -6,7 +6,6 @@ import Navigation from '@/components/layout/Navigation'
 import Footer from '@/components/layout/Footer'
 import CartDrawer from '@/components/layout/CartDrawer'
 import FloatingNavigation from '@/components/layout/FloatingNavigation'
-import { CartProvider } from '@/lib/store/cart'
 
 export default function MarketingLayout({
   children,
@@ -14,12 +13,12 @@ export default function MarketingLayout({
   children: React.ReactNode
 }) {
   return (
-    <CartProvider>
+    <>
       <Navigation />
       {children}
       <FloatingNavigation />
       <CartDrawer />
       <Footer />
-    </CartProvider>
+    </>
   )
 }

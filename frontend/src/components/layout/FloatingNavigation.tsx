@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ANIMATIONS } from '@/lib/config/animations'
@@ -21,6 +21,18 @@ const FOOTER_LINKS = [
 
 export default function FloatingNavigation() {
   const [isOpen, setIsOpen] = useState(false)
+
+  // Set initial hidden state synchronously before first paint.
+  // This runs client-side only ('use client'), so no SSR conflict.
+  // Prevents flash of visible orb before the scroll useEffect runs.
+  useLayoutEffect(() => {
+    const btn = document.getElementById('floating-navigation-orb')
+    if (!btn) return
+    btn.style.opacity = '0'
+    btn.style.pointerEvents = 'none'
+    btn.style.transform = 'translate3d(0, 20px, 0) scale(0.75)'
+  }, [])
+
   // ULTIMATE UNKILLABLE SCROLL TRACKER
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -88,12 +100,8 @@ export default function FloatingNavigation() {
         id="floating-navigation-orb"
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] w-14 h-14 md:w-16 md:h-16 rounded-full bg-ivory text-obsidian flex items-center justify-center shadow-lg border border-obsidian/5 transition-all duration-500 ease-luxury focus:outline-none"
-        style={{
-          opacity: 0,
-          pointerEvents: 'none',
-          transform: 'translate3d(0, 20px, 0) scale(0.75)',
-          willChange: 'transform, opacity'
-        }}
+        style={{ willChange: 'transform, opacity' }}
+        suppressHydrationWarning
         aria-label="Open Navigation"
       >
         <span className="font-display-sc text-[10px] tracking-[0.2em] uppercase mt-[2px] hover:scale-105 transition-transform">

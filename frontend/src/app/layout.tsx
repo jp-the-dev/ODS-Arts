@@ -7,7 +7,7 @@ import {
   jost,
 } from '@/lib/fonts'
 import { BRAND } from '@/constants'
-import FloatingNavigation from '@/components/layout/FloatingNavigation'
+import { CartProvider } from '@/lib/store/cart'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -59,8 +59,9 @@ export default function RootLayout({
       `}
     >
       <body className="min-h-full flex flex-col antialiased bg-obsidian text-ivory selection:bg-gold/30">
-        {children}
-        <FloatingNavigation />
+        <CartProvider>
+          {children}
+        </CartProvider>
       </body>
     </html>
   )
