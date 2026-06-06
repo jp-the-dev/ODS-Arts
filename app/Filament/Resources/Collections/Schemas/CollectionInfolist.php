@@ -15,11 +15,35 @@ class CollectionInfolist
             ->components([
                 TextEntry::make('name'),
                 TextEntry::make('slug'),
+                TextEntry::make('display_number')
+                    ->label('Number')
+                    ->placeholder('-'),
                 TextEntry::make('tagline')
+                    ->placeholder('-'),
+                TextEntry::make('eyebrow')
                     ->placeholder('-'),
                 TextEntry::make('description')
                     ->placeholder('-')
                     ->columnSpanFull(),
+                TextEntry::make('long_description')
+                    ->label('Long description')
+                    ->placeholder('-')
+                    ->columnSpanFull(),
+                TextEntry::make('materials')
+                    ->badge()
+                    ->placeholder('-'),
+                TextEntry::make('features')
+                    ->badge()
+                    ->placeholder('-'),
+                TextEntry::make('image_path')
+                    ->label('Hero image path')
+                    ->placeholder('-'),
+                TextEntry::make('image_alt')
+                    ->label('Hero image alt')
+                    ->placeholder('-'),
+                TextEntry::make('image_position')
+                    ->label('Image position')
+                    ->placeholder('-'),
                 ImageEntry::make('cover_image')
                     ->placeholder('-'),
                 IconEntry::make('is_active')

@@ -17,8 +17,12 @@ class ProductResource extends JsonResource
             'id' => $this->resource->id,
             'slug' => $this->resource->slug,
             'name' => $this->resource->name,
+            'tagline' => $this->resource->tagline,
             'description' => $this->resource->description,
+            'delivery_days' => $this->resource->delivery_days,
+            'care_instructions' => $this->resource->care_instructions ?? [],
             'material' => $this->resource->material,
+            'materials' => $this->resource->materials ?? [],
             'dimensions' => $this->resource->dimensions,
             // price exposed as rupees float (e.g. 1499.00)
             'price' => $this->resource->price,

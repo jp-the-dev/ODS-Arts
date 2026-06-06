@@ -1,20 +1,50 @@
 /**
  * ODSArts — Product Service
  *
- * THE ONLY FILE YOU NEED TO CHANGE WHEN THE BACKEND IS READY.
- *
- * Set NEXT_PUBLIC_USE_MOCK_DATA=false in .env.local and all API calls
- * automatically switch from mock data to the real Laravel backend.
- *
- * Mock  → src/lib/mock/products.ts   (zero network, instant)
- * Real  → apiFetch() via src/lib/api/client.ts  (ISR cached)
+ * Transforms the Laravel API response into the frontend Product type.
+ * The API returns flat products (one per size); the frontend expects
+ * a `variants`-based structure for unified rendering.
  */
 
-import { apiFetch } from '@/lib/api/client'
+import { apiFetch, ApiError } from '@/lib/api/client'
 import { MOCK_PRODUCTS } from '@/lib/mock/products'
-import type { Product, GetProductsResponse } from '@/lib/types/product'
+import type { Product, ProductImage as ProductImageType } from '@/lib/types/product'
 import type { ProductFilterParams } from '@/lib/types/filters'
 import { serializeFilters } from '@/lib/types/filters'
+
+// ── Raw API shapes ────────────────────────────────────────────────────────────
+
+interface ApiProductImage {
+  id: number
+  url: string
+  alt: string | null
+  sort_order: number
+}
+
+interface ApiCollectionSummary {
+  id: number
+  slug: string
+  name: string
+}
+
+interface ApiProduct {
+  id: number
+  slug: string
+  name: string
+  tagline: string | null
+  description: string
+  delivery_days: number
+  care_instructions: string[]
+  material: string
+  materials: string[]
+  dimensions: string
+  price: number
+  is_featured: boolean
+  collection: ApiCollectionSummary
+  images: ApiProductImage[]
+}
+
+type GetProductsResponse = ApiProduct[]
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true'
 
@@ -24,46 +54,76 @@ function lowestPrice(p: Product) {
   return Math.min(...p.variants.map((v) => v.basePricePaise))
 }
 
-// ── GET /collections/:slug/products ──────────────────────────────────────────
+// ── Transformer ────────────────────────────────────────────────────────────────
 
-/**
- * Returns all products (variants) for a given collection slug.
- */
+function toFrontendProduct(p: ApiProduct): Product {
+  const images: ProductImageType[] = p.images.map((img, i) => ({
+    url: img.url,
+    alt: img.alt || p.name,
+    role: i === 0 ? 'hero' : 'detail',
+  }))
+
+  return {
+    id: String(p.id),
+    slug: p.slug,
+    collectionSlug: p.collection.slug,
+    name: p.name,
+    tagline: p.tagline ?? '',
+    description: p.description,
+    deliveryDays: p.delivery_days ?? 14,
+    currency: 'INR',
+    variants: [
+      {
+        id: `v-${p.id}`,
+        sku: p.slug.toUpperCase().replace(/-/g, '_'),
+        sizeLabel: p.dimensions,
+        dimensionsCm: p.dimensions,
+        basePricePaise: Math.round(p.price * 100),
+        stockQty: 10,
+        weightGrams: 1000,
+      },
+    ],
+    finishOptions: [],
+    images,
+    careInstructions: p.care_instructions ?? [],
+    materials: p.materials?.length ? p.materials : [p.material],
+  }
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
+
 export async function getProductsByCollection(
-  collectionSlug: string
+  collectionSlug: string,
 ): Promise<Product[]> {
   if (USE_MOCK) {
     await Promise.resolve()
     return MOCK_PRODUCTS.filter((p) => p.collectionSlug === collectionSlug)
   }
-  return apiFetch<GetProductsResponse>(
-    `/collections/${collectionSlug}/products`,
-    { revalidate: 3600 }
-  )
+  const all = await getAllProducts()
+  return all.filter((p) => p.collectionSlug === collectionSlug)
 }
-
-// ── GET /products/:slug ───────────────────────────────────────────────────────
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   if (USE_MOCK) {
-    await Promise.resolve()
+    await Promise.resolve() // Simulate network latency
     return MOCK_PRODUCTS.find((p) => p.slug === slug) ?? null
   }
   try {
-    return await apiFetch<Product>(`/products/${slug}`, { revalidate: 3600 })
-  } catch {
-    return null
+    const raw = await apiFetch<{ data: ApiProduct }>(`/products/${slug}`)
+    return toFrontendProduct(raw.data)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
   }
 }
 
-// ── GET /products (all) ───────────────────────────────────────────────────────
-
 export async function getAllProducts(): Promise<Product[]> {
   if (USE_MOCK) {
-    await Promise.resolve()
+    await Promise.resolve() // Simulate network latency
     return MOCK_PRODUCTS
   }
-  return apiFetch<Product[]>('/products', { revalidate: 3600 })
+  const raw = await apiFetch<GetProductsResponse>('/products')
+  return raw.map(toFrontendProduct)
 }
 
 // ── GET /products?filters... ──────────────────────────────────────────────────

@@ -2,14 +2,15 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { COLLECTIONS } from '@/lib/data/collections'
+import { getAllCollections, getCollectionBySlug } from '@/lib/services/collections'
 import { getProductsByCollection } from '@/lib/services/products'
 import CollectionProductZone from '@/components/product/CollectionProductZone'
 
 // ── SSG ────────────────────────────────────────────────────────────────────────
 
-export function generateStaticParams() {
-  return COLLECTIONS.map((c) => ({ slug: c.slug }))
+export async function generateStaticParams() {
+  const collections = await getAllCollections()
+  return collections.map((c) => ({ slug: c.slug }))
 }
 
 export async function generateMetadata({
@@ -18,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const collection = COLLECTIONS.find((c) => c.slug === slug)
+  const collection = await getCollectionBySlug(slug)
   if (!collection) return {}
   return {
     title: `${collection.title} | ODSArts`,
@@ -34,7 +35,7 @@ export default async function CollectionPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const collection = COLLECTIONS.find((c) => c.slug === slug)
+  const collection = await getCollectionBySlug(slug)
   if (!collection) notFound()
 
   const products = await getProductsByCollection(slug)

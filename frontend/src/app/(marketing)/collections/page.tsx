@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { COLLECTIONS } from '@/lib/data/collections'
+import { getAllCollections } from '@/lib/services/collections'
 import { getAllProducts } from '@/lib/services/products'
 import { getAllArt } from '@/lib/services/art'
 import { ART_CATEGORIES } from '@/lib/data/artCategories'
@@ -18,7 +18,8 @@ export const metadata: Metadata = {
 
 export default async function CollectionsPage() {
   // Fetch both verticals in parallel
-  const [products, allArt] = await Promise.all([
+  const [collections, products, allArt] = await Promise.all([
+    getAllCollections(),
     getAllProducts(),
     getAllArt(),
   ])
@@ -29,7 +30,7 @@ export default async function CollectionsPage() {
     new Set(products.flatMap(p => p.variants.map(v => v.sizeLabel)))
   )
   const sizeCount = allSizeLabels.length
-  const collectionCount = COLLECTIONS.length
+  const collectionCount = collections.length
 
   return (
     <main className="bg-ivory min-h-screen">
@@ -82,7 +83,7 @@ export default async function CollectionsPage() {
           ZONE 2 — SERIES BANDS (3 compact editorial strips)
       ══════════════════════════════════════════════════════════════ */}
       <section className="border-t border-obsidian/6">
-        {COLLECTIONS.map((collection, idx) => {
+        {collections.map((collection, idx) => {
           const isEven = idx % 2 === 0
           const seriesProducts = products.filter(p => p.collectionSlug === collection.slug)
           const lowestAny = seriesProducts.length

@@ -1,8 +1,9 @@
 import CollectionStoryBlock from '@/components/collections/CollectionStoryBlock'
+import { getAllCollections } from '@/lib/services/collections'
 
-import { COLLECTIONS } from '@/lib/data/collections'
+export default async function FeaturedCollectionsSection() {
+  const collections = await getAllCollections()
 
-export default function FeaturedCollectionsSection() {
   return (
     <section className="bg-ivory w-full relative overflow-hidden py-24 md:py-32">
       
@@ -26,14 +27,14 @@ export default function FeaturedCollectionsSection() {
 
       {/* ── Collections ── */}
       <div className="max-w-7xl mx-auto px-6 flex flex-col gap-12 md:gap-0">
-        {COLLECTIONS.map((collection, index) => (
+        {collections.map((collection, index) => (
           <div key={collection.number}>
             <CollectionStoryBlock 
               {...collection} 
               linkHref={`/collections/${collection.slug}`}
             />
             {/* Elegant divider between blocks on mobile, or just whitespace on desktop */}
-            {index !== COLLECTIONS.length - 1 && (
+            {index !== collections.length - 1 && (
               <div className="w-full flex justify-center md:hidden my-8">
                 <div className="w-12 h-[1px] bg-gold/30" />
               </div>

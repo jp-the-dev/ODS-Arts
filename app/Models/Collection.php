@@ -16,9 +16,17 @@ class Collection extends Model
     protected $fillable = [
         'name',
         'slug',
+        'display_number',
         'tagline',
+        'eyebrow',
         'description',
+        'long_description',
+        'materials',
+        'features',
         'cover_image',
+        'image_path',
+        'image_alt',
+        'image_position',
         'is_active',
         'sort_order',
     ];
@@ -26,6 +34,8 @@ class Collection extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'materials' => 'array',
+        'features' => 'array',
     ];
 
     public function products(): HasMany

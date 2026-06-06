@@ -15,7 +15,8 @@ interface ProductConfiguratorProps {
 export default function ProductConfigurator({ product }: ProductConfiguratorProps) {
   const { addItem } = useCart()
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(product.variants[0])
-  const [selectedFinish, setSelectedFinish]   = useState<FinishOption>(product.finishOptions[0])
+  const defaultFinish: FinishOption = product.finishOptions[0] ?? { id: 'standard', name: 'Standard', swatchHex: '#000000', priceDeltaPaise: 0 }
+  const [selectedFinish, setSelectedFinish]   = useState<FinishOption>(defaultFinish)
   const [quantity, setQuantity]               = useState(1)
   const [added, setAdded]                     = useState(false)
   const [openAccordion, setOpenAccordion]     = useState<string | null>(null)

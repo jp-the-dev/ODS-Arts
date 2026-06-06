@@ -17,9 +17,13 @@ class Product extends Model
     protected $fillable = [
         'collection_id',
         'name',
+        'tagline',
         'slug',
         'description',
+        'delivery_days',
+        'care_instructions',
         'material',
+        'materials',
         'dimensions',
         'price_in_paise',
         'is_featured',
@@ -32,6 +36,9 @@ class Product extends Model
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'delivery_days' => 'integer',
+        'care_instructions' => 'array',
+        'materials' => 'array',
     ];
 
     public function collection(): BelongsTo

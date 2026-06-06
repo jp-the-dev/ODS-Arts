@@ -15,13 +15,25 @@ class ProductInfolist
                 TextEntry::make('collection.name')
                     ->label('Collection'),
                 TextEntry::make('name'),
+                TextEntry::make('tagline')
+                    ->placeholder('-'),
                 TextEntry::make('slug'),
                 TextEntry::make('description')
                     ->placeholder('-')
                     ->columnSpanFull(),
                 TextEntry::make('material')
                     ->placeholder('-'),
+                TextEntry::make('materials')
+                    ->badge()
+                    ->placeholder('-'),
                 TextEntry::make('dimensions')
+                    ->placeholder('-'),
+                TextEntry::make('delivery_days')
+                    ->label('Delivery (days)')
+                    ->numeric()
+                    ->placeholder('-'),
+                TextEntry::make('care_instructions')
+                    ->badge()
                     ->placeholder('-'),
                 TextEntry::make('price_in_paise')
                     ->numeric(),

@@ -28,9 +28,13 @@ class ProductImage extends Model
         return $this->belongsTo(Product::class);
     }
 
-    /** Full public URL of the image (from local storage). */
+    /** Full public URL of the image. Absolute paths (starting with /) are returned as-is for frontend public assets. */
     public function getUrlAttribute(): string
     {
+        if (str_starts_with($this->path, '/')) {
+            return $this->path;
+        }
+
         return asset('storage/'.$this->path);
     }
 }

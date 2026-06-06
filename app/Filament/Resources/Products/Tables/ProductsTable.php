@@ -39,6 +39,12 @@ class ProductsTable
                     ->color('warning')
                     ->sortable(),
 
+                TextColumn::make('tagline')
+                    ->searchable()
+                    ->limit(30)
+                    ->placeholder('—')
+                    ->toggleable(),
+
                 TextColumn::make('price_in_paise')
                     ->label('Price')
                     ->formatStateUsing(fn (int $state): string => '₹'.number_format($state / 100, 0))
@@ -46,6 +52,11 @@ class ProductsTable
 
                 TextColumn::make('material')
                     ->placeholder('—')
+                    ->toggleable(),
+
+                TextColumn::make('delivery_days')
+                    ->label('Delivery')
+                    ->numeric()
                     ->toggleable(),
 
                 TextColumn::make('dimensions')

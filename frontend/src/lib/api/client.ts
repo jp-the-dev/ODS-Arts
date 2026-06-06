@@ -12,6 +12,10 @@
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
+const DEFAULT_REVALIDATE = process.env.NEXT_PUBLIC_API_REVALIDATE 
+  ? parseInt(process.env.NEXT_PUBLIC_API_REVALIDATE, 10) 
+  : 3600
+
 export interface ApiFetchOptions extends Omit<RequestInit, 'next'> {
   /** ISR revalidation in seconds. Pass `false` to opt out of caching. */
   revalidate?: number | false
@@ -36,7 +40,7 @@ export async function apiFetch<T>(
           ? { revalidate: 0 }
           : revalidate !== undefined
             ? { revalidate }
-            : { revalidate: 3600 }, // default 1 hour
+            : { revalidate: DEFAULT_REVALIDATE },
     }),
     ...options,
   })

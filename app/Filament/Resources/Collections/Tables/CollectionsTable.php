@@ -26,6 +26,11 @@ class CollectionsTable
                     ->height(40)
                     ->defaultImageUrl(fn () => 'https://placehold.co/60x40/F5F0E8/3D2B1F?text=ODS'),
 
+                TextColumn::make('display_number')
+                    ->label('#')
+                    ->sortable()
+                    ->placeholder('—'),
+
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable()

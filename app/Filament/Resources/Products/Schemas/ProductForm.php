@@ -6,14 +6,15 @@ namespace App\Filament\Resources\Products\Schemas;
 
 use App\Models\Collection;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Set;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 
@@ -44,6 +45,10 @@ class ProductForm
                             ->unique(ignoreRecord: true)
                             ->helperText('Auto-filled from name.'),
 
+                        TextInput::make('tagline')
+                            ->maxLength(255)
+                            ->placeholder('e.g. Wide profile. Deep grain. Timeless.'),
+
                         Textarea::make('description')
                             ->rows(4)
                             ->columnSpanFull(),
@@ -52,9 +57,23 @@ class ProductForm
                             ->placeholder('e.g. Solid Walnut, Oak')
                             ->maxLength(255),
 
+                        TagsInput::make('materials')
+                            ->label('Materials list')
+                            ->placeholder('Add a material'),
+
                         TextInput::make('dimensions')
                             ->placeholder('e.g. 12×16 inches')
                             ->maxLength(255),
+
+                        TextInput::make('delivery_days')
+                            ->label('Delivery (working days)')
+                            ->numeric()
+                            ->default(14)
+                            ->suffix('days'),
+
+                        TagsInput::make('care_instructions')
+                            ->label('Care Instructions')
+                            ->placeholder('Add a care instruction'),
                     ])
                     ->columns(2),
 
@@ -113,7 +132,7 @@ class ProductForm
                             ])
                             ->columns(3)
                             ->itemLabel(fn (array $state): ?string => $state['alt'] ?? 'Image')
-                            ->reorderable('sort_order')
+                            ->orderColumn(fn () => 'sort_order')
                             ->collapsible(),
                     ]),
 
