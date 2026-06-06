@@ -70,8 +70,23 @@ export default function CartPageItems() {
       <ul className="divide-y divide-obsidian/8">
         <AnimatePresence initial={false}>
           {items.map((item) => {
-            const heroImg =
-              item.product.images.find((i) => i.role === 'hero') ?? item.product.images[0]
+            const isArt    = item.itemType === 'art'
+            const images   = isArt ? item.artProduct.images : item.product.images
+            const heroImg  = images.find((i) => i.role === 'hero') ?? images[0]
+            const name     = isArt ? item.artProduct.name : item.product.name
+            const subLabel = isArt
+              ? `${item.artVariant.sizeLabel} · ${item.artVariant.material.replace('-', ' ')}`
+              : `${item.variant.sizeLabel} · ${item.finish.name}`
+            const eyebrow = isArt
+              ? (item.artProduct.categorySlug.charAt(0).toUpperCase() + item.artProduct.categorySlug.slice(1) + ' Art')
+              : (item.product.collectionSlug === 'walnut'
+                  ? 'Signature Wood'
+                  : item.product.collectionSlug === 'gallery'
+                  ? 'Minimalist Architecture'
+                  : 'Vintage Opulence')
+            const href = isArt
+              ? `/art/${item.artProduct.categorySlug}/${item.artProduct.slug}`
+              : `/collections/${item.product.collectionSlug}`
 
             return (
               <motion.li
@@ -85,7 +100,7 @@ export default function CartPageItems() {
               >
                 {/* Thumbnail */}
                 <Link
-                  href={`/collections/${item.product.collectionSlug}`}
+                  href={href}
                   className="relative flex-shrink-0 w-24 h-28 md:w-32 md:h-40 bg-ivory-200 overflow-hidden group"
                 >
                   {heroImg && (
@@ -105,65 +120,31 @@ export default function CartPageItems() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-body text-[10px] uppercase tracking-[0.25em] text-gold mb-1.5">
-                        {item.product.collectionSlug === 'walnut'
-                          ? 'Signature Wood'
-                          : item.product.collectionSlug === 'gallery'
-                          ? 'Minimalist Architecture'
-                          : 'Vintage Opulence'}
+                        {eyebrow}
                       </p>
                       <h3 className="font-display text-[clamp(18px,1.8vw,24px)] text-obsidian leading-snug">
-                        {item.product.name}
+                        {name}
                       </h3>
-                      <p className="font-body text-[12px] text-pewter mt-1">
-                        {item.variant.sizeLabel} &middot; {item.finish.name}
-                      </p>
+                      <p className="font-body text-[12px] text-pewter mt-1">{subLabel}</p>
                     </div>
                     <button
                       onClick={() => removeItem(item.key)}
                       className="flex-shrink-0 mt-0.5 p-1 text-pewter hover:text-obsidian transition-colors focus:outline-none group"
-                      aria-label={`Remove ${item.product.name}`}
+                      aria-label={`Remove ${name}`}
                     >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 14 14"
-                        fill="none"
-                        className="transition-transform duration-200 group-hover:rotate-90"
-                      >
-                        <path
-                          d="M1 1L13 13M13 1L1 13"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                          strokeLinecap="round"
-                        />
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="transition-transform duration-200 group-hover:rotate-90">
+                        <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                       </svg>
                     </button>
                   </div>
 
                   {/* Bottom: qty + price */}
                   <div className="flex items-center justify-between mt-4">
-                    {/* Qty stepper */}
                     <div className="flex items-center border border-obsidian/15">
-                      <button
-                        onClick={() => updateQty(item.key, item.quantity - 1)}
-                        className="w-9 h-9 flex items-center justify-center text-obsidian hover:bg-obsidian/5 focus:outline-none font-body text-base transition-colors"
-                        aria-label="Decrease quantity"
-                      >
-                        −
-                      </button>
-                      <span className="w-9 text-center font-body text-sm text-obsidian tabular-nums">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => updateQty(item.key, item.quantity + 1)}
-                        className="w-9 h-9 flex items-center justify-center text-obsidian hover:bg-obsidian/5 focus:outline-none font-body text-base transition-colors"
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
+                      <button onClick={() => updateQty(item.key, item.quantity - 1)} className="w-9 h-9 flex items-center justify-center text-obsidian hover:bg-obsidian/5 focus:outline-none font-body text-base transition-colors" aria-label="Decrease quantity">−</button>
+                      <span className="w-9 text-center font-body text-sm text-obsidian tabular-nums">{item.quantity}</span>
+                      <button onClick={() => updateQty(item.key, item.quantity + 1)} className="w-9 h-9 flex items-center justify-center text-obsidian hover:bg-obsidian/5 focus:outline-none font-body text-base transition-colors" aria-label="Increase quantity">+</button>
                     </div>
-
-                    {/* Unit price */}
                     <span className="font-display text-[clamp(18px,1.6vw,22px)] text-obsidian">
                       {formatPrice(item.unitPricePaise * item.quantity)}
                     </span>

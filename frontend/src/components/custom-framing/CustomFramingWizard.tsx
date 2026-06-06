@@ -54,11 +54,11 @@ export default function CustomFramingWizard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: '#1C1916' }}>
+    <div className="flex flex-col lg:flex-row" style={{ background: '#1C1916', minHeight: 'calc(100vh - 68px)', marginTop: '68px' }}>
 
       {/* ── LEFT: Live Frame Preview ──────────────────────────────────────── */}
       <div
-        className="lg:sticky lg:top-0 lg:h-screen lg:w-[45%] flex-shrink-0 flex items-center justify-center order-2 lg:order-1"
+        className="lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:w-[45%] xl:w-[42%] flex-shrink-0 flex items-start lg:items-center justify-center order-2 lg:order-1 overflow-y-auto"
         style={{ background: '#141210', borderRight: '1px solid rgba(255,255,255,0.06)' }}
       >
         <FramePreview config={config} estimatedPrice={estimatedPrice} />
@@ -66,12 +66,12 @@ export default function CustomFramingWizard() {
 
       {/* ── RIGHT: Steps ─────────────────────────────────────────────────── */}
       <div
-        className="flex-1 flex flex-col order-1 lg:order-2 overflow-hidden"
+        className="flex-1 flex flex-col order-1 lg:order-2 lg:h-[calc(100vh-68px)]"
         style={{ background: '#231F1B' }}
       >
         {/* Progress bar header */}
         <div
-          className="px-10 md:px-16 pt-12 pb-7 flex-shrink-0"
+          className="px-6 md:px-10 lg:px-16 pt-8 lg:pt-12 pb-5 lg:pb-7 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
         >
           <StepProgressBar
@@ -83,7 +83,7 @@ export default function CustomFramingWizard() {
         </div>
 
         {/* Step content — animated */}
-        <div className="flex-1 overflow-y-auto px-10 md:px-16 py-12">
+        <div className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-16 py-8 lg:py-12">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={step}

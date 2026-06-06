@@ -90,7 +90,7 @@ export interface PlaceOrderRequest {
     productId: string
     productSlug: string
     variantId: string
-    finishId: string
+    finishId: string | null
     quantity: number
     unitPricePaise: number
   }>

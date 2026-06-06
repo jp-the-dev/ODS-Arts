@@ -20,9 +20,9 @@ export default function StepProgressBar({
   const progress = (currentStep - 1) / (totalSteps - 1)
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      {/* Step labels */}
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col gap-3 lg:gap-4 w-full">
+      {/* Step labels — hidden on very small screens, shown from md up */}
+      <div className="hidden md:flex justify-between items-center">
         {STEP_LABELS.map((label, i) => {
           const stepNum = i + 1
           const isActive = stepNum === currentStep
@@ -35,9 +35,9 @@ export default function StepProgressBar({
               type="button"
               onClick={() => isReachable && onStepClick(stepNum)}
               disabled={!isReachable}
-              className="font-body uppercase tracking-[0.15em] transition-all duration-300 focus:outline-none"
+              className="font-body uppercase tracking-[0.08em] lg:tracking-[0.15em] transition-all duration-300 focus:outline-none"
               style={{
-                fontSize: '11px',
+                fontSize: '10px',
                 color: isActive ? '#C9A96E' : isCompleted ? 'rgba(245,240,232,0.55)' : 'rgba(245,240,232,0.22)',
                 cursor: isReachable ? 'pointer' : 'default',
                 fontWeight: isActive ? '500' : '400',

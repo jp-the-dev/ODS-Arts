@@ -7,6 +7,7 @@ import { ANIMATIONS } from '@/lib/config/animations'
 
 const MENU_ITEMS = [
   { label: 'Collections', href: '/collections' },
+  { label: 'Art', href: '/art' },
   { label: 'Custom Framing', href: '/custom' },
   { label: 'Inspiration', href: '/inspiration' },
   { label: 'About', href: '/about' },

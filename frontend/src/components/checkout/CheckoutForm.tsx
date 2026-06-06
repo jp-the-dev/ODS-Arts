@@ -432,19 +432,24 @@ export default function CheckoutForm() {
 
         {/* Items summary */}
         <div className="border border-obsidian/10 divide-y divide-obsidian/8">
-          {items.map((item) => (
-            <div key={item.key} className="flex items-center justify-between px-5 py-4 gap-4">
-              <div>
-                <p className="font-display text-[15px] text-obsidian">{item.product.name}</p>
-                <p className="font-body text-[11px] text-pewter mt-0.5">
-                  {item.variant.sizeLabel} · {item.finish.name} · Qty {item.quantity}
+          {items.map((item) => {
+            const isArt    = item.itemType === 'art'
+            const name     = isArt ? item.artProduct.name : item.product.name
+            const subLabel = isArt
+              ? `${item.artVariant.sizeLabel} · ${item.artVariant.material.replace('-', ' ')} · Qty ${item.quantity}`
+              : `${item.variant.sizeLabel} · ${item.finish.name} · Qty ${item.quantity}`
+            return (
+              <div key={item.key} className="flex items-center justify-between px-5 py-4 gap-4">
+                <div>
+                  <p className="font-display text-[15px] text-obsidian">{name}</p>
+                  <p className="font-body text-[11px] text-pewter mt-0.5">{subLabel}</p>
+                </div>
+                <p className="font-body text-sm text-obsidian tabular-nums flex-shrink-0">
+                  ₹{(item.unitPricePaise * item.quantity / 100).toLocaleString('en-IN')}
                 </p>
               </div>
-              <p className="font-body text-sm text-obsidian tabular-nums flex-shrink-0">
-                ₹{(item.unitPricePaise * item.quantity / 100).toLocaleString('en-IN')}
-              </p>
-            </div>
-          ))}
+            )
+          })}
 
           {items.length === 0 && (
             <div className="px-5 py-6 text-center">

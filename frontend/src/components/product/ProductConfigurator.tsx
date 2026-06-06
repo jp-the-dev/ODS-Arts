@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import type { Product, ProductVariant, FinishOption } from '@/lib/types/product'
 import { formatPrice } from '@/lib/types/product'
 import { useCart } from '@/lib/store/cart'
+import WishlistButton from '@/components/product/WishlistButton'
 
 interface ProductConfiguratorProps {
   product: Product
@@ -207,6 +208,11 @@ export default function ProductConfigurator({ product }: ProductConfiguratorProp
       >
         {added ? '✓ Added to Cart' : inStock ? 'Add to Cart' : 'Out of Stock'}
       </motion.button>
+
+      {/* ── Wishlist ── */}
+      <div className="flex justify-center">
+        <WishlistButton product={product} variant="full" />
+      </div>
 
       {/* ── Trust badges ── */}
       <div className="flex flex-col gap-2 border-t border-obsidian/8 pt-6">

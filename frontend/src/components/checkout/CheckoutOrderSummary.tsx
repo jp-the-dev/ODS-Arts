@@ -18,37 +18,29 @@ export default function CheckoutOrderSummary() {
       {/* Items (read-only) */}
       <ul className="flex flex-col gap-4 max-h-64 overflow-y-auto pr-1">
         {items.map((item) => {
-          const heroImg =
-            item.product.images.find((i) => i.role === 'hero') ?? item.product.images[0]
+          const isArt   = item.itemType === 'art'
+          const images  = isArt ? item.artProduct.images : item.product.images
+          const heroImg = images.find((i) => i.role === 'hero') ?? images[0]
+          const name    = isArt ? item.artProduct.name : item.product.name
+          const sub     = isArt
+            ? `${item.artVariant.sizeLabel} · ${item.artVariant.material.replace('-', ' ')}`
+            : `${item.variant.sizeLabel} · ${item.finish.name}`
           return (
             <li key={item.key} className="flex gap-3">
               {/* Thumbnail */}
               <div className="relative w-14 h-14 flex-shrink-0 bg-ivory-300 overflow-hidden">
                 {heroImg && (
-                  <Image
-                    src={heroImg.url}
-                    alt={heroImg.alt}
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
+                  <Image src={heroImg.url} alt={heroImg.alt} fill sizes="56px" className="object-cover" />
                 )}
-                {/* Qty badge */}
                 <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-obsidian text-ivory font-body text-[9px] flex items-center justify-center tabular-nums">
                   {item.quantity}
                 </span>
               </div>
-
               {/* Info */}
               <div className="flex-1 flex flex-col justify-center gap-0.5">
-                <p className="font-display text-[15px] text-obsidian leading-snug">
-                  {item.product.name}
-                </p>
-                <p className="font-body text-[11px] text-pewter">
-                  {item.variant.sizeLabel} · {item.finish.name}
-                </p>
+                <p className="font-display text-[15px] text-obsidian leading-snug">{name}</p>
+                <p className="font-body text-[11px] text-pewter">{sub}</p>
               </div>
-
               {/* Price */}
               <p className="font-body text-sm text-obsidian tabular-nums flex-shrink-0">
                 {formatPrice(item.unitPricePaise * item.quantity)}

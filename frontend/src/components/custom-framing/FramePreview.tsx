@@ -72,7 +72,7 @@ export default function FramePreview({ config, estimatedPrice }: FramePreviewPro
   ]
 
   return (
-    <div className="flex flex-col w-full h-full px-10 py-10 gap-8 justify-center" style={{ maxWidth: '520px', margin: '0 auto' }}>
+    <div className="flex flex-col w-full h-full px-6 py-6 lg:px-8 lg:py-8 xl:px-10 xl:py-10 gap-5 lg:gap-6 xl:gap-8 justify-center" style={{ maxWidth: '520px', margin: '0 auto' }}>
 
       {/* ── Studio label ── */}
       <div className="flex items-center gap-3">
@@ -88,7 +88,7 @@ export default function FramePreview({ config, estimatedPrice }: FramePreviewPro
           layout
           transition={{ duration: 0.55, ease: [0.25, 0, 0, 1] }}
           className="relative w-full"
-          style={{ aspectRatio: `${aspectRatio}`, maxHeight: '420px' }}
+          style={{ aspectRatio: `${aspectRatio}`, maxHeight: 'clamp(220px, 30vh, 400px)' }}
         >
           {/* Drop shadow backdrop */}
           <div

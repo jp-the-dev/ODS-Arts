@@ -11,7 +11,7 @@ We are strictly following a cutting-edge, highly optimized frontend stack. All a
 ### Core Frameworks
 *   **Next.js (App Router):** v16.2.6 Turbopack — SSR, streaming, and App Router with route groups `(marketing)` and `(shop)`.
 *   **React 19+:** Server Components by default. `'use client'` only where strictly required (Framer Motion, refs, event listeners, state).
-*   **TypeScript:** Strict typing across the entire codebase.
+*   **TypeScript:** Strict typing across the entire codebase. Zero TS errors enforced.
 
 ### Styling & UI
 *   **Tailwind CSS v4:** All design tokens (colors, typography, spacing, animations) defined in `@theme {}` inside `src/app/globals.css`. **No `tailwind.config.ts`** — v4 handles this natively in CSS.
@@ -24,7 +24,7 @@ We are strictly following a cutting-edge, highly optimized frontend stack. All a
 ```
 src/
 ├── app/                        ← Next.js App Router
-│   ├── (marketing)/            ← Public pages: /, /collections, /about, /inspiration, etc.
+│   ├── (marketing)/            ← Public pages: /, /collections, /about, /inspiration, /wishlist, /gifting
 │   ├── (shop)/                 ← Transactional pages: /cart, /checkout
 │   ├── api/                    ← Route handlers: /api/contact, /api/newsletter
 │   └── globals.css             ← Tailwind v4 @theme tokens (single source of truth)
@@ -34,10 +34,12 @@ src/
 │   ├── checkout/               ← CheckoutForm, CheckoutOrderSummary
 │   ├── collections/            ← CollectionStoryBlock
 │   ├── hero/                   ← HeroSection, HeroContent, HeroVideo, HeroReveal, etc.
-│   ├── layout/                 ← Navigation, Footer, CartDrawer, FloatingNavigation, Container
+│   ├── layout/                 ← Navigation, Footer, CartDrawer, FloatingNavigation, Container, SearchDrawer
 │   ├── lifestyle/              ← HomeStoryBlock
 │   ├── motion/                 ← All Framer Motion client wrappers (FadeUp, ParallaxImage, etc.)
-│   ├── product/                ← ProductConfigurator, FrameCard, FrameGrid, CollectionProductZone, etc.
+│   ├── product/                ← ProductConfigurator, FrameCard, FrameGrid, FilterPanel,
+│   │                               PriceRangeSlider, QuickViewModal, QuickViewTrigger,
+│   │                               WishlistButton, CollectionProductZone
 │   ├── sections/               ← All homepage sections (FeaturedCollections, Craftsmanship, etc.)
 │   └── ui/                     ← Atoms: Button, GoldRule, EyebrowLabel, SectionHeader, etc.
 │
@@ -47,10 +49,19 @@ src/
 │   ├── data/collections.ts     ← Static editorial collection data (used by marketing pages)
 │   ├── fonts.ts                ← next/font/google instances (Cormorant + Jost)
 │   ├── mock/products.ts        ← 9 mock products (3 collections × 3 frame profiles)
-│   ├── services/products.ts    ← Mock-aware product service (getProductsByCollection, etc.)
-│   ├── store/cart.tsx          ← CartProvider (Context + useReducer + localStorage)
-│   ├── types/product.ts        ← Rich e-commerce types: Product, Variant, Finish, CartItem
+│   ├── services/
+│   │   ├── products.ts         ← Mock-aware product service (getProductsByCollection, getFilteredProducts, etc.)
+│   │   └── search.ts           ← searchProducts() — mock JS filter | real: GET /search?q=
+│   ├── store/
+│   │   ├── cart.tsx            ← CartProvider (Context + useReducer + localStorage)
+│   │   └── wishlist.tsx        ← WishlistProvider (Context + useReducer + localStorage, account-ready)
+│   ├── types/
+│   │   ├── product.ts          ← Rich e-commerce types: Product, Variant, Finish, CartItem
+│   │   └── filters.ts          ← ProductFilterParams, SortKey, serializeFilters, deserializeFilters
 │   └── utils.ts                ← cn(), formatPrice(), truncate()
+│
+├── providers/
+│   └── QuickViewProvider.tsx   ← Context + lazy-loaded QuickViewModal (openQuickView/closeQuickView)
 │
 ├── services/                   ← API service layer (real API calls via apiFetch)
 │   ├── collections.service.ts  ← getCollections(), getCollectionBySlug() [scaffolded, ready]
@@ -74,6 +85,10 @@ src/
 > **Framer Motion is SAFE for:** `useScroll + useTransform` (parallax), `whileHover`, `AnimatePresence` (drawers/modals).
 
 > **Mock vs Real API:** Set `NEXT_PUBLIC_USE_MOCK_DATA=false` in `.env.local` to switch the entire data layer from mock to Laravel API. No UI code changes required.
+
+> **URL as state:** All filter/sort/search state lives in URL searchParams via `useSearchParams` + `useRouter`. Never useState alone for filters — it makes pages unshare-able and breaks back navigation.
+
+> **Wishlist pattern:** Stores product slugs only in localStorage. When accounts go live, add `useEffect` to hydrate from `GET /wishlist` — hook API stays identical.
 
 ---
 
@@ -135,7 +150,7 @@ src/
 
 ### Phase 12: Collections Index [COMPLETED]
 *   `/collections/page.tsx` — hybrid server (editorial header) + client (`FrameGrid.tsx`).
-*   `FrameGrid.tsx` — in-memory filtering (All/Walnut/Gallery/Heritage) + sorting with Framer Motion layout animations.
+*   `FrameGrid.tsx` — URL-synced multi-axis filtering + sort with Framer Motion layout animations.
 *   `FrameCard.tsx` — 3:4 aspect ratio, hover scale, animated underlines, stock badges, pricing.
 *   Deep-linking: `/collections/[slug]?frame=[frame_slug]` pre-selects frame on collection detail.
 
@@ -146,45 +161,146 @@ src/
 *   **`/checkout` page** — 3-section luxury form (Contact / Delivery Address / Order Confirmation) + client-side validation + success screen with animated gold checkmark + order reference number.
 *   **`services/orders.service.ts`** — mock-aware order service (`placeOrder()`, `buildOrderRequest()`). Flip `NEXT_PUBLIC_USE_MOCK_DATA=false` to go live with Laravel `POST /orders`.
 *   **`types/index.ts`** — added `PlaceOrderRequest`, `PlaceOrderResponse`, `OrderStatus` types matching Laravel API contract.
-*   **Hydration fix:** `FloatingNavigation.tsx` — removed conflicting inline `style` props that caused SSR/client mismatch. Added `useLayoutEffect` for synchronous initial hidden state.
+
+### Phase 14: Custom Framing Configurator (`/custom-framing`) [COMPLETED]
+*   Full-screen dark studio mode — warm charcoal split layout. Left panel live preview, right panel animated wizard.
+*   `FramePreview.tsx` — Live CSS-only frame mockup. Updates real-time with every step selection.
+*   `StepProgressBar.tsx` — Gold gradient fill bar + clickable completed steps to go back.
+*   5 steps: Artwork upload → Size → Mat → Frame Material → Review & Request Quote.
+*   `services/customFraming.service.ts` — mock-aware `placeQuoteRequest()`. Flip flag → POSTs to Laravel.
+*   Responsive fix: Left panel no longer overlaps nav on 14" screens. Sticky scroll handled correctly.
+
+### Phase 15: E-Commerce UX Layer [COMPLETED — June 2026]
+
+#### 15A — URL-Synced Advanced Filters
+*   **`lib/types/filters.ts`** — `ProductFilterParams` type + `serializeFilters`/`deserializeFilters` URL helpers.
+*   **`lib/services/products.ts`** — Added `getFilteredProducts()`: mock JS filter | real: `GET /products?c=walnut&sort=price_asc&min=...`
+*   **`FilterPanel.tsx`** — Luxury sticky sidebar (desktop) + slide-in drawer (mobile). Sections: Sort (5 options), Collection (multi-select pills), Size (chip grid), Price Range (dual slider), In-Stock toggle. Active filter count badge. "Clear all" button.
+*   **`PriceRangeSlider.tsx`** — Custom dual-handle slider with gold fill track. 300ms debounced URL update.
+*   **`FrameGrid.tsx`** — Fully rebuilt. Filters now live in URL (`useSearchParams` + `useRouter`). Active filter chips strip with per-chip × clear. Animated result count. New 2-col layout: FilterPanel sidebar + product grid.
+*   Filters are **shareable, bookmarkable, SEO-crawlable** — URL reflects exact state.
+
+#### 15B — Global Search
+*   **`lib/services/search.ts`** — `searchProducts()`: mock JS filter (name + tagline + materials) | real: `GET /search?q=`.
+*   **`SearchDrawer.tsx`** — Full-screen dark overlay search. 200ms debounced live results. Thumbnail cards with name/series/price. Keyboard navigation (↑↓ Enter Esc). "View all N results" → pushes `?q=` to `/collections`. Empty state with CTA.
+*   **`Navigation.tsx`** — Search icon (🔍) added to nav bar. Cart bag icon (🛍) added with live gold count badge. Both always visible on mobile + desktop.
+
+#### 15C — Quick View Modal
+*   **`QuickViewProvider.tsx`** — Context + lazy-loaded modal (`dynamic()` import). `openQuickView(product)` / `closeQuickView()` hooks.
+*   **`QuickViewModal.tsx`** — 2-column dark blurred modal: left = product images (hero + lifestyle thumbnail), right = full `ProductConfigurator` with add-to-cart. Escape / backdrop to close. Body scroll locked.
+*   **`QuickViewTrigger.tsx`** — Thin `'use client'` wrapper button that calls context. Slides up from bottom of card image on hover.
+*   **`FrameCard.tsx`** — Updated with Quick View slide-up button + Wishlist icon overlay.
+
+#### 15D — Wishlist (localStorage, account-ready)
+*   **`lib/store/wishlist.tsx`** — `WishlistProvider`: Context + useReducer + localStorage. Stores product slugs only. Account-ready: when user accounts go live, add `useEffect` to sync from `GET /wishlist` — hook API stays identical.
+*   **`WishlistButton.tsx`** — Two variants: `icon` (card image overlay) + `full` (text+heart row in ProductConfigurator). Animated Framer Motion heart fill on toggle.
+*   **`/wishlist/page.tsx`** — Editorial wishlist page with animated grid. Empty state with gold heart icon + "Start Exploring" CTA.
+*   WishlistProvider + QuickViewProvider added to root `layout.tsx` alongside CartProvider.
+
+#### 15E — Bug Fixes
+*   Cart drawer quantity number was invisible (inherited `text-ivory` from root body). Fixed by adding `text-obsidian` to the qty `<span>`.
+
+### Phase 16: Art Collection [COMPLETED — June 2026]
+
+#### 16A — Architecture & Types
+*   **`lib/types/art.ts`** — `ArtProduct`, `ArtMaterialVariant`, `ArtCategory`, `PrintMaterial`, `ArtStyle`.
+*   **`lib/types/product.ts`** — `CartItem` converted to a discriminated union with `itemType: 'frame' | 'art'` to support a mixed cart.
+*   **`lib/types/filters.ts`** — Extended with `ArtFilterParams` (materials, art styles).
+*   **`types/index.ts`** — Modified `PlaceOrderRequest` to allow `finishId` to be nullable, aligning with art products lacking finish options.
+
+#### 16B — UI Components & Pages
+*   **`src/components/art/`** — Created `MaterialSelector`, `ArtCard`, `ArtGrid`, `ArtCategoryCard`, `ArtConfigurator`.
+*   **`/art` hub** — Editorial hub showcasing 6 art categories with placeholder AI images.
+*   **`/art/[categorySlug]`** — Category detail page displaying a grid of art within that category.
+*   **`/art/[categorySlug]/[artSlug]`** — Individual art product configurator (material + size selector).
+*   **`/collections` update** — Replaced static grid with `CollectionsTabs` component allowing users to toggle between Frames and Art collections.
+*   **Global Search Update** — Modified `searchGlobal` and `SearchDrawer` to return unified results, enabling keyboard navigation across mixed frames/art.
+
+#### 16C — Services & Mock Data
+*   **`lib/mock/art.ts` & `lib/data/artCategories.ts`** — Seeded 18 mock art items across 6 categories.
+*   **`lib/services/art.ts`** — Mock-aware art service (`getArtByCategory`, `getFilteredArt`, `getAllArt`, `getArtBySlug`).
+
+### Phase 17: Homepage Art Teaser + FloatingNavigation [COMPLETED — June 2026]
+
+#### 17A — ArtCollectionTeaser Section (`src/components/sections/ArtCollectionTeaser.tsx`)
+*   New full-width section placed between `FeaturedCollectionsSection` and `CraftsmanshipSection` on the homepage.
+*   Uses a **warm linen background** (`#EDE8DF`) with soft gradient edges blending into the surrounding ivory — avoids the jarring dark-to-light cut that the first version had.
+*   Shows all 6 art categories as a **horizontally draggable card strip** (Framer Motion `drag="x"`).
+*   Section header and each card use `useScrollReveal` (IO-based, back-nav safe) with staggered delays.
+*   Card images use Framer Motion `whileHover={{ scale: 1.06 }}` only (safe pattern — not an entry animation).
+*   Bottom row: category quick-links + obsidian "View All Art Prints" CTA button.
+
+#### 17B — FloatingNavigation Update (`src/components/layout/FloatingNavigation.tsx`)
+*   Added `{ label: 'Art', href: '/art' }` to `MENU_ITEMS` between `Collections` and `Custom Framing`.
+*   The orb drawer now gives users a direct path to the Art vertical from anywhere on the page after scrolling 800px.
 
 ---
 
-## 3. Completed Phases (cont.)
+## 3. Backend API Contract (For Laravel Developer)
 
-### Phase 14: Custom Framing Configurator (`/custom-framing`) [COMPLETED]
-*   **Full-screen dark studio mode** — warm charcoal `#1C1916` / `#231F1B` split layout. Left panel sticky live preview, right panel animated wizard steps.
-*   **Split layout:** 45% left = live CSS frame preview. 55% right = step-by-step form. On mobile, preview collapses above steps.
-*   **`types.ts`** — `FramingConfig` extracted into a dedicated types file to prevent circular imports between the wizard orchestrator and step components.
-*   **`FramePreview.tsx`** — Live CSS-only frame mockup. Frame material = CSS gradient border. Mat = padding + background-color. Aspect ratio = CSS `aspect-ratio` property. Updates in real time as user picks each option. No images needed.
-*   **`StepProgressBar.tsx`** — Gold gradient fill bar (`scaleX` animation) + clickable step labels. Completed steps clickable to go back.
-*   **`StepOptionChip.tsx`** — Fully interactive chip: gold gradient background + glowing border on selected, hover lift (`y: -1, scale: 1.015`), animated gold left-bar, shimmer on hover.
-*   **Step 1 — Artwork:** Drag-drop upload zone with FileReader preview. Gold border on hover. Artwork shown live inside the frame preview. "Skip" option.
-*   **Step 2 — Size:** 7 standard presets + custom W×H inputs + cm/inch unit toggle. Live aspect ratio update in preview.
-*   **Step 3 — Mat:** 4 style chips (None/Single/Double/Museum) + 8 colour swatches (animated gold ring on selected) + 3 width chips. Sub-options animate in.
-*   **Step 4 — Frame:** 4 material cards with CSS gradient swatch strips + hover lift + gold glow on selected. Finish colour circles (3 per material) + 4 profile chips appear after material selection. Price estimate from hardcoded lookup table.
-*   **Step 5 — Review & Request:** Full config summary card + contact form (name, email, phone, notes) + animated gold checkmark success screen with `CFR-XXXXXX` quote reference.
-*   **`services/customFraming.service.ts`** — mock-aware `placeQuoteRequest()`. Flip `NEXT_PUBLIC_USE_MOCK_DATA=false` → POSTs to `POST /custom-framing/quotes`. Zero UI changes.
-*   **`types/index.ts`** — added `CustomFramingQuoteRequest` and `CustomFramingQuoteResponse` types matching Laravel API contract.
-*   **Step transitions:** Framer Motion `AnimatePresence` with directional x-axis slide (forward = right→left, back = left→right). Each step's content stagger-reveals after slide completes.
-*   **Bug fix:** `opengraph-image.tsx` was returning HTTP 400 — fixed by providing a proper sized root div with explicit `width`/`height` to `ImageResponse`.
+When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `GET /products` | GET | All products (no filter) |
+| `GET /products?c=walnut,gallery&s=8x10&sort=price_asc&min_price=50000&max_price=200000&stock=1&page=1` | GET | Filtered + paginated frames |
+| `GET /search?q={query}&limit=6` | GET | Full-text search across frames and art |
+| `GET /products/:slug` | GET | Single product by slug |
+| `GET /collections/:slug/products` | GET | Products in a collection |
+| `GET /art` | GET | All art |
+| `GET /art/categories` | GET | All art categories |
+| `GET /art/categories/:slug/products` | GET | All art in a category |
+| `GET /art/:slug` | GET | Single art product |
+| `GET /art?style=cultural&material=canvas&sort=price_asc` | GET | Filtered + paginated art |
+| `POST /orders` | POST | Place an order (supports mixed cart) |
+| `POST /custom-framing/quotes` | POST | Place a custom framing quote request |
+
+**Filter query params Laravel should support (Frames):**
+- `c` — comma-separated collection slugs: `walnut,gallery,heritage`
+- `s` — pipe-separated size labels: `8" × 10"|11" × 14"`
+- `min_price` / `max_price` — integers in paise
+- `stock` — `1` = in-stock only
+- `sort` — `recommended | price_asc | price_desc | newest | delivery_asc`
+- `page` / `per_page` — pagination
+- `q` — full-text search string
+
+**Filter query params Laravel should support (Art):**
+- `style` — comma-separated: `cultural,modern,automotive`
+- `material` — comma-separated: `canvas,photo-paper,fine-art`
+- `size` — pipe-separated size labels
+- `min_price` / `max_price` — paise (cheapest combo)
+- `stock` — `1`
+- `sort` — `recommended | price_asc | price_desc | newest`
+- `q` — full-text search
 
 ---
 
 ## 4. Pending Roadmap
 
-### Phase 15: Gifting Page (`/gifting`) [NEXT]
+### Phase 18: Gifting Page (`/gifting`) [PLANNING]
 **Goal:** Editorial landing page — gifting hero, 3 curated gift sets, corporate gifting section with lead form, gift process timeline.
 
-### Phase 16: Performance & SEO Polish
-**Goal:** Lighthouse audit, OG images, sitemap, robots, reduced-motion support, accessibility pass, font loading optimisation.
+### Phase 19: Products Listing Page (`/products`) [NEXT]
+**Goal:** Flat all-products listing (not grouped by collection). Uses the same FrameGrid + FilterPanel.
 
-## 4. Backend Integration Checklist (When Laravel is Ready)
+### Phase 20: Responsiveness Audit [IN PROGRESS]
+**Goal:** Full audit across all pages at 375px, 768px (tablet), 1280px (14" laptop), 1920px. Known gaps: homepage hero on iPad, product configurator mobile layout.
+
+### Phase 21: Performance & SEO Polish
+**Goal:** Lighthouse audit, OG images for all routes, sitemap, robots.txt, reduced-motion support, accessibility pass, font loading optimisation.
+
+---
+
+## 5. Backend Integration Checklist (When Laravel is Ready)
 
 | What | How |
 |---|---|
 | Product data (real) | Set `NEXT_PUBLIC_USE_MOCK_DATA=false` — `lib/services/products.ts` auto-switches |
+| Filtered products | Same flag — `lib/services/products.ts::getFilteredProducts()` passes URL query params |
+| Search | Same flag — `lib/services/search.ts::searchProducts()` hits `GET /search?q=` |
 | Order submission | Same flag — `services/orders.service.ts` routes to `POST /orders` |
+| Custom framing quote | Same flag — `services/customFraming.service.ts` routes to `POST /custom-framing/quotes` |
+| Wishlist server sync | Add `useEffect` in `WishlistProvider` calling `GET /wishlist` on mount (authenticated users) |
 | Cart server sync | Add `useEffect` in `CartProvider` calling `GET /cart` on mount + `POST /cart/sync` on mutation |
 | Newsletter | Wire `src/app/api/newsletter/route.ts` to Laravel endpoint |
 | Contact form | Wire `src/app/api/contact/route.ts` to Laravel endpoint |

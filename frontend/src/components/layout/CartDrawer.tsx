@@ -75,7 +75,14 @@ export default function CartDrawer() {
               ) : (
                 <ul className="flex flex-col divide-y divide-obsidian/6">
                   {items.map((item) => {
-                    const heroImg = item.product.images.find(i => i.role === 'hero') ?? item.product.images[0]
+                    const isArt = item.itemType === 'art'
+                    const heroImg = isArt
+                      ? (item.artProduct.images.find(i => i.role === 'hero') ?? item.artProduct.images[0])
+                      : (item.product.images.find(i => i.role === 'hero') ?? item.product.images[0])
+                    const productName  = isArt ? item.artProduct.name : item.product.name
+                    const subLabel     = isArt
+                      ? `${item.artVariant.sizeLabel} · ${item.artVariant.material.replace('-', ' ')}`
+                      : `${item.variant.sizeLabel} · ${item.finish.name}`
                     return (
                       <li key={item.key} className="flex gap-4 py-5">
                         {/* Thumbnail */}
@@ -94,10 +101,10 @@ export default function CartDrawer() {
                         {/* Info */}
                         <div className="flex-1 flex flex-col gap-1">
                           <h3 className="font-display text-[16px] text-obsidian leading-snug">
-                            {item.product.name}
+                            {productName}
                           </h3>
                           <p className="font-body text-[12px] text-pewter">
-                            {item.variant.sizeLabel} · {item.finish.name}
+                            {subLabel}
                           </p>
                           <p className="font-body text-[13px] text-obsidian mt-1">
                             {formatPrice(item.unitPricePaise)}
@@ -112,7 +119,7 @@ export default function CartDrawer() {
                               >
                                 −
                               </button>
-                              <span className="w-8 text-center font-body text-sm tabular-nums">{item.quantity}</span>
+                              <span className="w-8 text-center font-body text-sm text-obsidian tabular-nums">{item.quantity}</span>
                               <button
                                 onClick={() => updateQty(item.key, item.quantity + 1)}
                                 className="w-8 h-8 flex items-center justify-center text-obsidian hover:bg-obsidian/5 focus:outline-none font-body"

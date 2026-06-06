@@ -5,6 +5,7 @@
 import Link from 'next/link'
 import { HeroSection } from '@/components/hero'
 import FeaturedCollectionsSection from '@/components/sections/FeaturedCollectionsSection'
+import ArtCollectionTeaser from '@/components/sections/ArtCollectionTeaser'
 import CraftsmanshipSection from '@/components/sections/CraftsmanshipSection'
 import CustomerHomesSection from '@/components/sections/CustomerHomesSection'
 import FinalCTASection from '@/components/sections/FinalCTASection'
@@ -140,6 +141,11 @@ export default function HomePage() {
           SCREEN 3 — Featured Collections
       ═══════════════════════════════════════════ */}
       <FeaturedCollectionsSection />
+
+      {/* ═══════════════════════════════════════════
+          SCREEN 3B — Art Collection Teaser
+      ═══════════════════════════════════════════ */}
+      <ArtCollectionTeaser />
 
       {/* ═══════════════════════════════════════════
           SCREEN 4 — Craftsmanship

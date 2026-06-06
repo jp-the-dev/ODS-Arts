@@ -63,14 +63,26 @@ export function buildOrderRequest(
       pincode: form.pincode,
       country: 'IN',
     },
-    items: items.map((item) => ({
-      productId: item.product.id,
-      productSlug: item.product.slug,
-      variantId: item.variant.id,
-      finishId: item.finish.id,
-      quantity: item.quantity,
-      unitPricePaise: item.unitPricePaise,
-    })),
+    items: items.map((item) => {
+      if (item.itemType === 'art') {
+        return {
+          productId:      item.artProduct.id,
+          productSlug:    item.artProduct.slug,
+          variantId:      item.artVariant.id,
+          finishId:       null,
+          quantity:       item.quantity,
+          unitPricePaise: item.unitPricePaise,
+        }
+      }
+      return {
+        productId:      item.product.id,
+        productSlug:    item.product.slug,
+        variantId:      item.variant.id,
+        finishId:       item.finish.id,
+        quantity:       item.quantity,
+        unitPricePaise: item.unitPricePaise,
+      }
+    }),
     subtotalPaise,
     currency: 'INR',
     notes: form.notes || undefined,

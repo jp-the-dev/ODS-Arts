@@ -1,18 +1,35 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { COLLECTIONS } from '@/lib/data/collections'
 import { getAllProducts } from '@/lib/services/products'
+import { getAllArt } from '@/lib/services/art'
+import { ART_CATEGORIES } from '@/lib/data/artCategories'
+import { artLowestPrice } from '@/lib/types/art'
+import { formatPrice } from '@/lib/types/product'
 import FrameGrid from '@/components/product/FrameGrid'
+import CollectionsTabs from '@/components/collections/CollectionsTabs'
 
 export const metadata: Metadata = {
-  title: 'All Collections | ODSArts',
-  description: 'Explore every frame in the ODSArts collection. Filter by series and sort by price to find the perfect frame for your artwork.',
+  title: 'Collections | ODSArts',
+  description: 'Explore the ODSArts frame and art collections. Premium picture frames and museum-quality art prints, handcrafted to order.',
 }
 
 export default async function CollectionsPage() {
-  // Single fetch — all 9 products passed to the client grid component
-  const products = await getAllProducts()
+  // Fetch both verticals in parallel
+  const [products, allArt] = await Promise.all([
+    getAllProducts(),
+    getAllArt(),
+  ])
+
+  // Derive frame stats
+  const frameProfileCount = products.length
+  const allSizeLabels = Array.from(
+    new Set(products.flatMap(p => p.variants.map(v => v.sizeLabel)))
+  )
+  const sizeCount = allSizeLabels.length
+  const collectionCount = COLLECTIONS.length
 
   return (
     <main className="bg-ivory min-h-screen">
@@ -41,17 +58,16 @@ export default async function CollectionsPage() {
           </h1>
 
           <p className="font-body text-[clamp(15px,1.2vw,17px)] leading-[1.9] text-pewter-dark max-w-xl">
-            Three collections. Nine distinct profiles. Each one an architectural philosophy in wood, metal, or gilded craft.
-            From ₹5,499 to bespoke commissions.
+            Every series. Every profile. An architectural philosophy in wood, metal, and gilded craft —
+            from heirloom portraits to gallery-wall statements.
           </p>
 
-          {/* Stat row */}
+          {/* Stat row — all values derived from live data */}
           <div className="mt-14 flex items-center gap-12 md:gap-20">
             {[
-              { num: '3',  label: 'Collections' },
-              { num: '9',  label: 'Frame Profiles' },
-              { num: '4',  label: 'Sizes Each'    },
-              { num: '14', label: 'Day Delivery'  },
+              { num: collectionCount,    label: 'Collections'    },
+              { num: frameProfileCount,  label: 'Frame Profiles' },
+              { num: sizeCount,          label: 'Size Options'   },
             ].map(({ num, label }) => (
               <div key={label} className="flex flex-col items-center gap-1">
                 <span className="font-display text-[clamp(28px,2.5vw,40px)] text-obsidian">{num}</span>
@@ -153,28 +169,98 @@ export default async function CollectionsPage() {
           ZONE 3 — COMPLETE FRAME GRID (All 9 frames)
       ══════════════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-6 md:px-10 py-24 md:py-32">
-        {/* Section header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
-          <div>
-            <div className="flex items-center gap-4 mb-5">
-              <div className="h-[1px] w-10 bg-gold/50" />
-              <span className="font-body text-[10px] uppercase tracking-[0.3em] text-gold">
-                The Complete Selection
-              </span>
-            </div>
-            <h2 className="font-display text-[clamp(32px,3.5vw,52px)] leading-[1.1] tracking-tight text-obsidian">
-              All{' '}
-              <span className="italic text-walnut">{products.length}</span>{' '}
-              Frames
-            </h2>
-          </div>
-          <p className="font-body text-[14px] text-pewter max-w-xs leading-relaxed">
-            Filter by collection series or sort by price to discover the frame that speaks to your space.
-          </p>
-        </div>
 
-        {/* Client-side filterable grid — receives all products from server */}
-        <FrameGrid products={products} />
+        {/* Tab switcher */}
+        <CollectionsTabs
+          frameContent={
+            <div>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+                <div>
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="h-[1px] w-10 bg-gold/50" />
+                    <span className="font-body text-[10px] uppercase tracking-[0.3em] text-gold">
+                      The Complete Frame Selection
+                    </span>
+                  </div>
+                  <h2 className="font-display text-[clamp(32px,3.5vw,52px)] leading-[1.1] tracking-tight text-obsidian">
+                    All{' '}
+                    <span className="italic text-walnut">{products.length}</span>{' '}
+                    Frames
+                  </h2>
+                </div>
+                <p className="font-body text-[14px] text-pewter max-w-xs leading-relaxed">
+                  Filter by collection series or sort by price to discover the frame that speaks to your space.
+                </p>
+              </div>
+              <Suspense fallback={<div className="py-24 text-center font-body text-pewter">Loading frames…</div>}>
+                <FrameGrid products={products} />
+              </Suspense>
+            </div>
+          }
+          artContent={
+            <div>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+                <div>
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="h-[1px] w-10 bg-gold/50" />
+                    <span className="font-body text-[10px] uppercase tracking-[0.3em] text-gold">
+                      Curated Art Prints
+                    </span>
+                  </div>
+                  <h2 className="font-display text-[clamp(32px,3.5vw,52px)] leading-[1.1] tracking-tight text-obsidian">
+                    <span className="italic text-walnut">{allArt.length}</span>{' '}
+                    Original Prints
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <p className="font-body text-[14px] text-pewter max-w-xs leading-relaxed">
+                    Printed on museum-grade materials. Never mass produced.
+                  </p>
+                  <Link href="/art" className="font-body text-[11px] uppercase tracking-[0.2em] text-gold border-b border-gold/40 self-start pb-0.5">
+                    Browse full art collection →
+                  </Link>
+                </div>
+              </div>
+
+              {/* 6 category cards grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-12">
+                {ART_CATEGORIES.map((cat) => {
+                  const catArt = allArt.filter(a => a.categorySlug === cat.slug)
+                  const fromPrice = catArt.length > 0
+                    ? Math.min(...catArt.map(artLowestPrice))
+                    : 0
+                  return (
+                    <Link
+                      key={cat.slug}
+                      href={`/art/${cat.slug}`}
+                      className="group relative overflow-hidden aspect-[3/4] block"
+                    >
+                      <Image
+                        src={cat.coverImage}
+                        alt={cat.coverImageAlt}
+                        fill
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+                      />
+                      <div
+                        className="absolute inset-0"
+                        style={{ background: 'linear-gradient(to top, rgba(14,13,11,0.85) 0%, rgba(14,13,11,0.05) 55%)' }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <span className="font-body text-[8px] uppercase tracking-[0.3em] text-gold/80 block mb-1">{cat.eyebrow}</span>
+                        <span className="font-display text-[18px] text-ivory leading-tight block mb-1">{cat.title}</span>
+                        <span className="font-body text-[11px] text-ivory/55">
+                          {catArt.length} prints · from {formatPrice(fromPrice)}
+                        </span>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          }
+        />
+
       </section>
 
       {/* ══════════════════════════════════════════════════════════════

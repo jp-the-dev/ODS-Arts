@@ -7,11 +7,15 @@ import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
 import { BRAND, NAV_LINKS } from '@/constants'
 import MobileMenuButton from '@/components/motion/MobileMenuButton'
 import Container from '@/components/layout/Container'
+import SearchDrawer from '@/components/layout/SearchDrawer'
+import { useCart } from '@/lib/store/cart'
 
 export default function Navigation() {
   const pathname = usePathname()
   const { scrollY } = useScroll()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const { totalItems, openDrawer } = useCart()
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setIsScrolled(latest > 50)
@@ -24,12 +28,13 @@ export default function Navigation() {
   }
 
   const navLinks = NAV_LINKS.filter(link =>
-    ['Collections', 'Custom Framing', 'Inspiration', 'About'].some(
+    ['Collections', 'Art', 'Custom Framing', 'Inspiration', 'About'].some(
       req => link.label.includes(req) || req.includes(link.label)
     )
   )
 
   return (
+    <>
     <motion.header
       className={`fixed top-0 left-0 right-0 z-[90] transition-all duration-500 ease-luxury ${
         isScrolled
@@ -63,8 +68,40 @@ export default function Navigation() {
             ))}
           </nav>
 
-          {/* CTA + Mobile */}
-          <div className="flex flex-1 justify-end items-center gap-4">
+          {/* CTA + Search + Mobile */}
+          <div className="flex flex-1 justify-end items-center gap-3">
+            {/* Search icon */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+              aria-label="Search frames"
+            >
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M11 11L15.5 15.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </button>
+
+            {/* Cart icon with live count badge */}
+            <button
+              onClick={openDrawer}
+              className="relative w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+              aria-label={`Open cart — ${totalItems} item${totalItems !== 1 ? 's' : ''}`}
+            >
+              <svg width="18" height="17" viewBox="0 0 18 17" fill="none">
+                <path d="M1 1H3.5L5.5 11H13.5L15.5 4H4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="7" cy="14" r="1" fill="currentColor"/>
+                <circle cx="12" cy="14" r="1" fill="currentColor"/>
+              </svg>
+              {totalItems > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full flex items-center justify-center font-body text-[9px] text-ivory leading-none px-0.5"
+                  style={{ background: '#C9A96E' }}
+                >
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
+            </button>
             <div className="hidden lg:block">
               <Link
                 href="/collections"
@@ -79,5 +116,7 @@ export default function Navigation() {
         </div>
       </Container>
     </motion.header>
+    <SearchDrawer isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+  </>
   )
 }

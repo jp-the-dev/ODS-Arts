@@ -37,8 +37,9 @@ export const BREAKPOINTS = {
 
 export const NAV_LINKS = [
   { label: 'Collections', href: '/collections' },
+  { label: 'Art', href: '/art' },
   { label: 'Custom Framing', href: '/custom-framing' },
-  { label: 'Craftsmanship', href: '/about' },
+  { label: 'About', href: '/about' },
   { label: 'Gifting', href: '/gifting' },
   { label: 'Inspiration', href: '/inspiration' },
 ] as const

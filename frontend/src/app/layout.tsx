@@ -8,6 +8,8 @@ import {
 } from '@/lib/fonts'
 import { BRAND } from '@/constants'
 import { CartProvider } from '@/lib/store/cart'
+import { WishlistProvider } from '@/lib/store/wishlist'
+import { QuickViewProvider } from '@/providers/QuickViewProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -60,7 +62,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col antialiased bg-obsidian text-ivory selection:bg-gold/30">
         <CartProvider>
-          {children}
+          <WishlistProvider>
+            <QuickViewProvider>
+              {children}
+            </QuickViewProvider>
+          </WishlistProvider>
         </CartProvider>
       </body>
     </html>

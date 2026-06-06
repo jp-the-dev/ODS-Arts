@@ -14,7 +14,8 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
-import type { CartItem, ProductVariant, FinishOption, Product } from '@/lib/types/product'
+import type { CartItem, FrameCartItem, ProductVariant, FinishOption, Product } from '@/lib/types/product'
+import type { ArtProduct, ArtMaterialVariant, ArtCartItem } from '@/lib/types/art'
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
@@ -26,13 +27,14 @@ interface CartState {
 // ── Actions ────────────────────────────────────────────────────────────────────
 
 type CartAction =
-  | { type: 'ADD_ITEM';    payload: { product: Product; variant: ProductVariant; finish: FinishOption; quantity: number } }
-  | { type: 'REMOVE_ITEM'; payload: { key: string } }
-  | { type: 'UPDATE_QTY';  payload: { key: string; quantity: number } }
+  | { type: 'ADD_ITEM';     payload: { product: Product; variant: ProductVariant; finish: FinishOption; quantity: number } }
+  | { type: 'ADD_ART_ITEM'; payload: { artProduct: ArtProduct; artVariant: ArtMaterialVariant; quantity: number } }
+  | { type: 'REMOVE_ITEM';  payload: { key: string } }
+  | { type: 'UPDATE_QTY';   payload: { key: string; quantity: number } }
   | { type: 'CLEAR_CART' }
   | { type: 'OPEN_DRAWER' }
   | { type: 'CLOSE_DRAWER' }
-  | { type: 'HYDRATE';     payload: CartItem[] }
+  | { type: 'HYDRATE';      payload: CartItem[] }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         : [
             ...state.items,
             {
+              itemType: 'frame' as const,
               key,
               product: {
                 id: product.id,
@@ -73,7 +76,38 @@ function cartReducer(state: CartState, action: CartAction): CartState {
               finish,
               quantity,
               unitPricePaise,
-            },
+            } satisfies FrameCartItem,
+          ]
+
+      return { ...state, items: newItems, isDrawerOpen: true }
+    }
+
+    case 'ADD_ART_ITEM': {
+      const { artProduct, artVariant, quantity } = action.payload
+      const key = `art__${artVariant.id}`
+      const existing = state.items.find((i) => i.key === key)
+
+      const newItems: CartItem[] = existing
+        ? state.items.map((i) =>
+            i.key === key ? { ...i, quantity: i.quantity + quantity } : i
+          )
+        : [
+            ...state.items,
+            {
+              itemType: 'art' as const,
+              key,
+              artProduct: {
+                id: artProduct.id,
+                slug: artProduct.slug,
+                categorySlug: artProduct.categorySlug,
+                name: artProduct.name,
+                currency: artProduct.currency,
+                images: artProduct.images,
+              },
+              artVariant,
+              quantity,
+              unitPricePaise: artVariant.pricePaise,
+            } satisfies ArtCartItem,
           ]
 
       return { ...state, items: newItems, isDrawerOpen: true }
@@ -114,6 +148,7 @@ interface CartContextValue {
   subtotalPaise: number
   totalItems: number
   addItem: (product: Product, variant: ProductVariant, finish: FinishOption, quantity?: number) => void
+  addArtItem: (artProduct: ArtProduct, artVariant: ArtMaterialVariant, quantity?: number) => void
   removeItem: (key: string) => void
   updateQty: (key: string, quantity: number) => void
   clearCart: () => void
@@ -160,6 +195,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
+  const addArtItem = useCallback(
+    (artProduct: ArtProduct, artVariant: ArtMaterialVariant, quantity = 1) =>
+      dispatch({ type: 'ADD_ART_ITEM', payload: { artProduct, artVariant, quantity } }),
+    []
+  )
+
   const removeItem = useCallback(
     (key: string) => dispatch({ type: 'REMOVE_ITEM', payload: { key } }),
     []
@@ -190,6 +231,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         subtotalPaise,
         totalItems,
         addItem,
+        addArtItem,
         removeItem,
         updateQty,
         clearCart,

@@ -61,7 +61,9 @@ export interface Product {
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
 
-export interface CartItem {
+/** Cart item for a frame purchase */
+export interface FrameCartItem {
+  itemType: 'frame'
   /** Client-side unique key: `${variant.id}__${finish.id}` */
   key: string
   product: Pick<Product, 'id' | 'slug' | 'collectionSlug' | 'name' | 'currency' | 'images'>
@@ -71,6 +73,14 @@ export interface CartItem {
   /** Unit price in paise (variant.basePricePaise + finish.priceDeltaPaise) */
   unitPricePaise: number
 }
+
+/**
+ * Unified cart item — either a frame or an art print.
+ * Use `item.itemType === 'frame'` to narrow to FrameCartItem.
+ * Use `item.itemType === 'art'` to narrow to ArtCartItem.
+ */
+export type CartItem = FrameCartItem | import('@/lib/types/art').ArtCartItem
+
 
 // ── API Response Shapes ────────────────────────────────────────────────────────
 
