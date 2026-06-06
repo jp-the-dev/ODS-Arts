@@ -88,8 +88,8 @@ export default function ProductConfigurator({ product }: ProductConfiguratorProp
       {/* ── Title & price ── */}
       <div>
         <span className="font-body text-[10px] uppercase tracking-[0.25em] text-gold">
-          {product.collectionSlug === 'walnut' ? 'Signature Wood'
-            : product.collectionSlug === 'gallery' ? 'Minimalist Architecture'
+          {product.collectionSlug === 'box-frame' ? 'Classic Depth'
+            : product.collectionSlug === 'gallery-frame' ? 'Minimalist Architecture'
             : 'Vintage Opulence'}
         </span>
         <h1 className="font-display text-[clamp(28px,3vw,42px)] leading-[1.1] tracking-tight text-obsidian mt-2 mb-1">

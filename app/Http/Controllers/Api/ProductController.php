@@ -10,11 +10,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
 {
-    /** GET /api/v1/products — list active products (optionally filter by collection slug) */
+    /** GET /api/v1/products — list active products */
     public function index(): AnonymousResourceCollection
     {
         $products = Product::active()
-            ->with(['images', 'collection'])
+            ->with(['images', 'collection.finishOptions', 'variants'])
             ->orderBy('sort_order')
             ->get();
 
@@ -26,19 +26,19 @@ class ProductController extends Controller
     {
         $products = Product::active()
             ->featured()
-            ->with(['images', 'collection'])
+            ->with(['images', 'collection.finishOptions', 'variants'])
             ->orderBy('sort_order')
             ->get();
 
         return ProductResource::collection($products);
     }
 
-    /** GET /api/v1/products/{slug} — show a single product with all images */
+    /** GET /api/v1/products/{slug} — show a single product */
     public function show(string $slug): ProductResource|JsonResponse
     {
         $product = Product::active()
             ->where('slug', $slug)
-            ->with(['images', 'collection'])
+            ->with(['images', 'collection.finishOptions', 'variants'])
             ->first();
 
         if (! $product) {

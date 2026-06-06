@@ -97,13 +97,17 @@ export default async function CollectionsPage() {
             >
               {/* Image side */}
               <div className={`relative h-[320px] md:h-[440px] overflow-hidden group ${isEven ? '' : 'md:[direction:ltr]'}`}>
-                <Image
-                  src={collection.imageSrc}
-                  alt={collection.imageAlt}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-103"
-                />
+                {collection.imageSrc ? (
+                  <Image
+                    src={collection.imageSrc}
+                    alt={collection.imageAlt}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-103"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-obsidian/5" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-obsidian/40 via-transparent to-transparent" />
               </div>
 

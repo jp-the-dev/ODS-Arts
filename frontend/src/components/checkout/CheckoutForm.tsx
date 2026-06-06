@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/lib/store/cart'
+import { initiatePayment } from '@/lib/services/razorpay'
 import { placeOrder, buildOrderRequest } from '@/services/orders.service'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -125,7 +126,6 @@ export default function CheckoutForm() {
     const validationErrors = validate(form)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
-      // Scroll to first error
       const firstError = document.querySelector('[data-field-error]')
       firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
@@ -134,16 +134,22 @@ export default function CheckoutForm() {
     setIsSubmitting(true)
 
     try {
-      // placeOrder() handles mock vs real API via NEXT_PUBLIC_USE_MOCK_DATA flag.
-      // When backend is ready: set NEXT_PUBLIC_USE_MOCK_DATA=false in .env.local.
-      // Zero other code changes needed.
       const response = await placeOrder(
         buildOrderRequest(form, items, subtotalPaise)
       )
+
+      try {
+        await initiatePayment(response.orderReference, {
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+        })
+      } catch {
+        // Payment cancelled or failed — order is still saved
+      }
+
       setOrderRef(response.orderReference)
     } catch {
-      // Surface a user-friendly error — real ApiValidationError handling
-      // can be added here when the backend is live.
       setErrors({ form: 'Something went wrong. Please try again or contact us.' })
     } finally {
       setIsSubmitting(false)
@@ -219,16 +225,16 @@ export default function CheckoutForm() {
 
         {/* Message */}
         <p className="font-body text-[14px] leading-[1.8] text-pewter-dark max-w-sm mb-10">
-          We&apos;ll reach out to{' '}
-          <span className="text-obsidian font-medium">{form.email}</span> within 24 hours to
-          confirm your order details and share a payment link.
+          A confirmation email has been sent to{' '}
+          <span className="text-obsidian font-medium">{form.email}</span>.
+          Your order will begin processing once payment is confirmed.
         </p>
 
         {/* Delivery info */}
         <div className="flex flex-col gap-2 mb-10">
           {[
             'Handcrafted in our studio with museum-grade materials',
-            'Estimated delivery: 7–14 working days after confirmation',
+            'Estimated delivery: 7–14 working days after payment confirmation',
             'You\'ll receive tracking updates via WhatsApp & email',
           ].map((line, i) => (
             <div key={i} className="flex items-center gap-2.5 justify-center">
@@ -514,11 +520,11 @@ export default function CheckoutForm() {
                   d="M4 12a8 8 0 018-8v2a6 6 0 00-6 6H4z"
                 />
               </svg>
-              Placing Order…
+              Processing…
             </>
           ) : (
             <>
-              Place Order
+              Pay ₹{(subtotalPaise / 100).toLocaleString('en-IN')}
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
                 <path
                   d="M1 7h12M8 3l4 4-4 4"
@@ -533,8 +539,8 @@ export default function CheckoutForm() {
         </motion.button>
 
         <p className="font-body text-[11px] text-center text-pewter leading-relaxed">
-          You won&apos;t be charged online. Our team will confirm your order and share a{' '}
-          <span className="text-obsidian">secure payment link</span> within 24 hours.
+          Secured by <span className="text-obsidian">Razorpay</span>. Your payment
+          information is encrypted and processed safely.
         </p>
       </div>
     </form>

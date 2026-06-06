@@ -43,6 +43,11 @@ class Collection extends Model
         return $this->hasMany(Product::class)->orderBy('sort_order');
     }
 
+    public function finishOptions(): HasMany
+    {
+        return $this->hasMany(FinishOption::class)->orderBy('sort_order');
+    }
+
     /**
      * Scope to only active collections.
      *

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -9,6 +10,7 @@ import MobileMenuButton from '@/components/motion/MobileMenuButton'
 import Container from '@/components/layout/Container'
 import SearchDrawer from '@/components/layout/SearchDrawer'
 import { useCart } from '@/lib/store/cart'
+import { useAuth } from '@/lib/store/auth'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -16,6 +18,7 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const { totalItems, openDrawer } = useCart()
+  const { user } = useAuth()
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setIsScrolled(latest > 50)
@@ -102,6 +105,40 @@ export default function Navigation() {
                 </span>
               )}
             </button>
+
+            {/* Auth link */}
+            <div className="hidden lg:block">
+              {user ? (
+                <Link
+                  href="/account"
+                  className="font-body text-label uppercase tracking-label text-obsidian/65 hover:text-obsidian transition-colors"
+                  aria-label="My account"
+                >
+                  {user.auth_provider === 'google' && user.avatar_url ? (
+                    <Image
+                      src={user.avatar_url}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  )}
+                </Link>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="font-body text-label uppercase tracking-label text-obsidian/65 hover:text-obsidian transition-colors"
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
+
             <div className="hidden lg:block">
               <Link
                 href="/collections"

@@ -24,7 +24,6 @@ class ProductResource extends JsonResource
             'material' => $this->resource->material,
             'materials' => $this->resource->materials ?? [],
             'dimensions' => $this->resource->dimensions,
-            // price exposed as rupees float (e.g. 1499.00)
             'price' => $this->resource->price,
             'is_featured' => $this->resource->is_featured,
             'collection' => $this->whenLoaded('collection', fn () => [
@@ -32,6 +31,12 @@ class ProductResource extends JsonResource
                 'slug' => $this->resource->collection->slug,
                 'name' => $this->resource->collection->name,
             ]),
+            'variants' => ProductVariantResource::collection($this->whenLoaded('variants', fn () => $this->resource->variants)),
+            'finish_options' => $this->when(
+                $this->resource->relationLoaded('collection') && $this->resource->collection->relationLoaded('finishOptions'),
+                fn () => FinishOptionResource::collection($this->resource->collection->finishOptions),
+                [],
+            ),
             'images' => ProductImageResource::collection($this->whenLoaded('images', fn () => $this->resource->images)),
         ];
     }

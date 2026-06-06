@@ -9,9 +9,87 @@
 
 import { apiFetch } from '@/lib/api/client'
 import { MOCK_ART } from '@/lib/mock/art'
-import type { ArtProduct, ArtStyle, PrintMaterial } from '@/lib/types/art'
+import type { ArtProduct, ArtStyle, PrintMaterial, ArtMaterialVariant } from '@/lib/types/art'
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true'
+
+// ── API response shapes ───────────────────────────────────────────────────────
+
+interface ApiArtImage {
+  id: number
+  url: string
+  alt: string | null
+  role: string
+}
+
+interface ApiArtMaterialVariant {
+  id: number
+  sku: string
+  material: string
+  size_label: string
+  dimensions_cm: string
+  price_paise: number
+  stock_qty: number
+  weight_grams: number
+}
+
+interface ApiArtProduct {
+  id: number
+  slug: string
+  category_slug: string
+  name: string
+  tagline: string | null
+  description: string | null
+  artist: string
+  medium: string | null
+  delivery_days: number
+  currency: string
+  material_variants: ApiArtMaterialVariant[]
+  images: ApiArtImage[]
+  tags: string[]
+}
+
+interface ApiArtCategory {
+  id: number
+  slug: string
+  title: string
+  art_products: ApiArtProduct[]
+}
+
+// ── Transformer ───────────────────────────────────────────────────────────────
+
+function toFrontendArtProduct(p: ApiArtProduct): ArtProduct {
+  const materialVariants: ArtMaterialVariant[] = p.material_variants.map((v) => ({
+    id: `${p.slug}__${v.material}__${v.size_label.replace(/[^\w]/g, '')}`,
+    sku: v.sku,
+    material: v.material as PrintMaterial,
+    sizeLabel: v.size_label,
+    dimensionsCm: v.dimensions_cm,
+    pricePaise: v.price_paise,
+    stockQty: v.stock_qty,
+    weightGrams: v.weight_grams,
+  }))
+
+  return {
+    id: String(p.id),
+    slug: p.slug,
+    categorySlug: p.category_slug as ArtStyle,
+    name: p.name,
+    tagline: p.tagline ?? '',
+    description: p.description ?? '',
+    artist: p.artist,
+    medium: p.medium ?? '',
+    deliveryDays: p.delivery_days,
+    currency: 'INR',
+    materialVariants,
+    images: p.images.map((img) => ({
+      url: img.url,
+      alt: img.alt ?? '',
+      role: img.role as 'hero' | 'detail' | 'lifestyle',
+    })),
+    tags: p.tags ?? [],
+  }
+}
 
 // ── Filter params (matches backend query string) ──────────────────────────────
 
@@ -34,7 +112,12 @@ export async function getAllArt(): Promise<ArtProduct[]> {
     await Promise.resolve()
     return MOCK_ART
   }
-  return apiFetch<ArtProduct[]>('/art', { revalidate: 3600 })
+  try {
+    const raw = await apiFetch<ApiArtProduct[]>('/art', { revalidate: 3600 })
+    return raw.map(toFrontendArtProduct)
+  } catch {
+    return USE_MOCK ? MOCK_ART : []
+  }
 }
 
 /** All art in a single category */
@@ -43,7 +126,12 @@ export async function getArtByCategory(categorySlug: ArtStyle): Promise<ArtProdu
     await Promise.resolve()
     return MOCK_ART.filter((a) => a.categorySlug === categorySlug)
   }
-  return apiFetch<ArtProduct[]>(`/art/categories/${categorySlug}/products`, { revalidate: 3600 })
+  try {
+    const raw = await apiFetch<ApiArtCategory>(`/art/categories/${categorySlug}`, { revalidate: 3600 })
+    return (raw.art_products ?? []).map(toFrontendArtProduct)
+  } catch {
+    return []
+  }
 }
 
 /** Single art product by slug */
@@ -52,7 +140,12 @@ export async function getArtBySlug(slug: string): Promise<ArtProduct | null> {
     await Promise.resolve()
     return MOCK_ART.find((a) => a.slug === slug) ?? null
   }
-  return apiFetch<ArtProduct>(`/art/${slug}`, { revalidate: 3600 })
+  try {
+    const raw = await apiFetch<ApiArtProduct>(`/art/${slug}`, { revalidate: 3600 })
+    return toFrontendArtProduct(raw)
+  } catch {
+    return null
+  }
 }
 
 /** Filtered + sorted art — JS in mock, query string on real API */
@@ -134,7 +227,10 @@ export async function getFilteredArt(params: ArtFilterParams): Promise<{ art: Ar
   if (params.sort)                  qs.set('sort',      params.sort)
   if (params.query)                 qs.set('q',         params.query)
 
-  return apiFetch<{ art: ArtProduct[]; total: number }>(`/art?${qs}`, { revalidate: 0 })
+  const qp = qs.toString()
+  const raw = await apiFetch<ApiArtProduct[]>(`/art${qp ? `?${qp}` : ''}`, { revalidate: 0 })
+  const art = raw.map(toFrontendArtProduct)
+  return { art, total: art.length }
 }
 
 /** Search art by name, tagline, tags, medium */
@@ -154,8 +250,11 @@ export async function searchArt(query: string, limit = 6): Promise<{ art: ArtPro
     return { art: matches.slice(0, limit), total: matches.length }
   }
 
-  return apiFetch<{ art: ArtProduct[]; total: number }>(
-    `/search?q=${encodeURIComponent(q)}&type=art&limit=${limit}`,
-    { revalidate: false }
-  )
+  try {
+    const raw = await apiFetch<ApiArtProduct[]>(`/art?q=${encodeURIComponent(q)}`, { revalidate: false })
+    const art = raw.map(toFrontendArtProduct)
+    return { art: art.slice(0, limit), total: art.length }
+  } catch {
+    return { art: [], total: 0 }
+  }
 }

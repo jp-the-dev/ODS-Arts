@@ -36,7 +36,7 @@ function toFrontendCollection(c: ApiCollection): Collection {
     longDescription: c.long_description ?? '',
     materials: c.materials ?? [],
     features: c.features ?? [],
-    imageSrc: c.image_src ?? '',
+    imageSrc: c.image_src ?? null,
     imageAlt: c.image_alt ?? '',
     imagePosition: (c.image_position as 'left' | 'right') ?? 'left',
   }

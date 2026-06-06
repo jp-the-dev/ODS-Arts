@@ -14,6 +14,7 @@ class CollectionController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $collections = Collection::active()
+            ->with('finishOptions')
             ->orderBy('sort_order')
             ->get();
 
@@ -25,7 +26,10 @@ class CollectionController extends Controller
     {
         $collection = Collection::active()
             ->where('slug', $slug)
-            ->with(['products' => fn ($q) => $q->active()->with('images')->orderBy('sort_order')])
+            ->with([
+                'finishOptions',
+                'products' => fn ($q) => $q->active()->with(['images', 'variants', 'collection.finishOptions'])->orderBy('sort_order'),
+            ])
             ->first();
 
         if (! $collection) {

@@ -12,9 +12,18 @@
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
+const APP_URL = BASE_URL.replace(/\/api\/v1\/?$/, '')
+
 const DEFAULT_REVALIDATE = process.env.NEXT_PUBLIC_API_REVALIDATE 
   ? parseInt(process.env.NEXT_PUBLIC_API_REVALIDATE, 10) 
   : 3600
+
+/** Read a cookie value by name (browser only). */
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
 
 export interface ApiFetchOptions extends Omit<RequestInit, 'next'> {
   /** ISR revalidation in seconds. Pass `false` to opt out of caching. */
@@ -27,12 +36,24 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`
 
+  const method = options.method ?? 'GET'
+  const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+
+  const csrfToken = isStateChanging ? getCookie('XSRF-TOKEN') : null
+
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> | undefined),
+  }
+
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken
+  }
+
   const res = await fetch(url, {
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
+    credentials: 'include',
     // Only attach next config on the server (Next.js fetch extension)
     ...(typeof window === 'undefined' && {
       next:
@@ -58,6 +79,15 @@ export async function apiFetch<T>(
   const json = await res.json()
   // Unwrap Laravel's standard { data: ... } envelope if present
   return ('data' in json ? json.data : json) as T
+}
+
+/**
+ * Fetch the XSRF cookie from the server so subsequent POST requests
+ * carry the CSRF token. Must be called before login/register for
+ * Sanctum SPA authentication.
+ */
+export async function fetchCsrfCookie(): Promise<void> {
+  await fetch(`${APP_URL}/sanctum/csrf-cookie`, { credentials: 'include' })
 }
 
 // ---- Error classes --------------------------------------------------------

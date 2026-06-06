@@ -106,9 +106,21 @@ export async function placeOrder(
   }
 
   // Real API — activates when NEXT_PUBLIC_USE_MOCK_DATA=false
-  return apiFetch<PlaceOrderResponse>('/orders', {
+  const res = await apiFetch<{
+    id: number
+    order_number: string
+    ordered_at: string
+    status: string
+  }>('/auth/orders', {
     method: 'POST',
     body: JSON.stringify(request),
     revalidate: false, // POST — never cache
   })
+
+  return {
+    orderReference: res.order_number,
+    placedAt: res.ordered_at,
+    estimatedDeliveryDays: { min: 7, max: 14 },
+    contactEmail: 'hello@odsarts.in',
+  }
 }

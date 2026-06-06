@@ -79,9 +79,9 @@ export default function CartPageItems() {
               : `${item.variant.sizeLabel} · ${item.finish.name}`
             const eyebrow = isArt
               ? (item.artProduct.categorySlug.charAt(0).toUpperCase() + item.artProduct.categorySlug.slice(1) + ' Art')
-              : (item.product.collectionSlug === 'walnut'
-                  ? 'Signature Wood'
-                  : item.product.collectionSlug === 'gallery'
+              : (item.product.collectionSlug === 'box-frame'
+                  ? 'Classic Depth'
+                  : item.product.collectionSlug === 'gallery-frame'
                   ? 'Minimalist Architecture'
                   : 'Vintage Opulence')
             const href = isArt

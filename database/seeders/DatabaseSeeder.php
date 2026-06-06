@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             CollectionSeeder::class,
-            FrameOptionSeeder::class,
+            ArtSeeder::class,
             TestimonialSeeder::class,
         ]);
     }

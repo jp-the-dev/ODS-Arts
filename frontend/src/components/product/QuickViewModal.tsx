@@ -13,9 +13,9 @@ interface QuickViewModalProps {
 }
 
 const COLLECTION_LABEL: Record<string, string> = {
-  walnut:   'Walnut Series',
-  gallery:  'Gallery Series',
-  heritage: 'Heritage Collection',
+  'box-frame':     'Box Frame',
+  'gallery-frame': 'Gallery Frame',
+  'glass-frame':   'Glass Frame',
 }
 
 export default function QuickViewModal({ product, onClose }: QuickViewModalProps) {

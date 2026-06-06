@@ -13,7 +13,7 @@ export interface CollectionStoryBlockProps {
   title: string
   description: string
   materials: string[]
-  imageSrc: string
+  imageSrc: string | null
   imageAlt: string
   linkHref: string
   imagePosition?: 'left' | 'right'
@@ -65,13 +65,17 @@ export default function CollectionStoryBlock({
             whileHover={{ scale: 1.04 }}
             transition={{ duration: 1.2, ease: ANIMATIONS.ease.luxury }}
           >
-            <Image
-              src={imageSrc}
-              alt={imageAlt}
-              fill
-              sizes="(max-width: 768px) 100vw, 60vw"
-              className="object-cover"
-            />
+            {imageSrc ? (
+              <Image
+                src={imageSrc}
+                alt={imageAlt}
+                fill
+                sizes="(max-width: 768px) 100vw, 60vw"
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-obsidian/5" />
+            )}
           </motion.div>
           <div className="absolute inset-0 shadow-inner pointer-events-none" />
         </motion.div>

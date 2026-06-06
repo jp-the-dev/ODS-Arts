@@ -2,13 +2,12 @@
  * ODSArts — Product Service
  *
  * Transforms the Laravel API response into the frontend Product type.
- * The API returns flat products (one per size); the frontend expects
- * a `variants`-based structure for unified rendering.
+ * The API now returns a multi-variant structure matching the frontend Product type.
  */
 
 import { apiFetch, ApiError } from '@/lib/api/client'
 import { MOCK_PRODUCTS } from '@/lib/mock/products'
-import type { Product, ProductImage as ProductImageType } from '@/lib/types/product'
+import type { Product, ProductImage as ProductImageType, ProductVariant, FinishOption } from '@/lib/types/product'
 import type { ProductFilterParams } from '@/lib/types/filters'
 import { serializeFilters } from '@/lib/types/filters'
 
@@ -27,6 +26,24 @@ interface ApiCollectionSummary {
   name: string
 }
 
+interface ApiProductVariant {
+  id: number
+  sku: string
+  size_label: string
+  dimensions_cm: string
+  base_price_paise: number
+  stock_qty: number
+  weight_grams: number
+}
+
+interface ApiFinishOption {
+  id: number
+  name: string
+  slug: string
+  swatch_hex: string
+  price_delta_paise: number
+}
+
 interface ApiProduct {
   id: number
   slug: string
@@ -41,6 +58,8 @@ interface ApiProduct {
   price: number
   is_featured: boolean
   collection: ApiCollectionSummary
+  variants: ApiProductVariant[]
+  finish_options: ApiFinishOption[]
   images: ApiProductImage[]
 }
 
@@ -63,6 +82,23 @@ function toFrontendProduct(p: ApiProduct): Product {
     role: i === 0 ? 'hero' : 'detail',
   }))
 
+  const variants: ProductVariant[] = p.variants.map((v) => ({
+    id: String(v.id),
+    sku: v.sku,
+    sizeLabel: v.size_label,
+    dimensionsCm: v.dimensions_cm,
+    basePricePaise: v.base_price_paise,
+    stockQty: v.stock_qty,
+    weightGrams: v.weight_grams,
+  }))
+
+  const finishOptions: FinishOption[] = p.finish_options.map((f) => ({
+    id: String(f.id),
+    name: f.name,
+    swatchHex: f.swatch_hex,
+    priceDeltaPaise: f.price_delta_paise,
+  }))
+
   return {
     id: String(p.id),
     slug: p.slug,
@@ -72,18 +108,8 @@ function toFrontendProduct(p: ApiProduct): Product {
     description: p.description,
     deliveryDays: p.delivery_days ?? 14,
     currency: 'INR',
-    variants: [
-      {
-        id: `v-${p.id}`,
-        sku: p.slug.toUpperCase().replace(/-/g, '_'),
-        sizeLabel: p.dimensions,
-        dimensionsCm: p.dimensions,
-        basePricePaise: Math.round(p.price * 100),
-        stockQty: 10,
-        weightGrams: 1000,
-      },
-    ],
-    finishOptions: [],
+    variants,
+    finishOptions,
     images,
     careInstructions: p.care_instructions ?? [],
     materials: p.materials?.length ? p.materials : [p.material],

@@ -18,9 +18,9 @@ interface SearchDrawerProps {
 }
 
 const COLLECTION_LABEL: Record<string, string> = {
-  walnut:   'Walnut Series',
-  gallery:  'Gallery Series',
-  heritage: 'Heritage Collection',
+  'box-frame':     'Box Frame',
+  'gallery-frame': 'Gallery Frame',
+  'glass-frame':   'Glass Frame',
 }
 
 export default function SearchDrawer({ isOpen, onClose }: SearchDrawerProps) {
@@ -264,7 +264,7 @@ export default function SearchDrawer({ isOpen, onClose }: SearchDrawerProps) {
                 >
                   <p className="font-display text-xl text-obsidian mb-2">Nothing found</p>
                   <p className="font-body text-[13px] text-pewter mb-6">
-                    Try searching for walnut, heritage, canvas, or nature.
+                    Try searching for box frame, glass frame, canvas, or nature.
                   </p>
                   <button
                     onClick={() => { onClose(); router.push('/collections') }}

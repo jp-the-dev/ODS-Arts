@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { BRAND, NAV_LINKS } from '@/constants'
+import { useAuth } from '@/lib/store/auth'
 
 export default function MobileMenuOverlay({
   isOpen,
@@ -11,6 +12,7 @@ export default function MobileMenuOverlay({
   isOpen: boolean
   onClose: () => void
 }) {
+  const { user } = useAuth()
   return (
     <AnimatePresence>
       {isOpen && (
@@ -32,6 +34,13 @@ export default function MobileMenuOverlay({
                 {link.label}
               </Link>
             ))}
+            <Link
+              href={user ? '/account' : '/auth/login'}
+              onClick={onClose}
+              className="font-display text-h1 text-pewter italic hover:text-gold transition-colors"
+            >
+              {user ? 'My Account' : 'Sign In'}
+            </Link>
           </div>
 
           <div className="mt-auto">

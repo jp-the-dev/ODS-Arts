@@ -1,9 +1,11 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect, useLayoutEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ANIMATIONS } from '@/lib/config/animations'
+import { useAuth } from '@/lib/store/auth'
 
 const MENU_ITEMS = [
   { label: 'Collections', href: '/collections' },
@@ -22,6 +24,7 @@ const FOOTER_LINKS = [
 
 export default function FloatingNavigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const { user } = useAuth()
 
   // Set initial hidden state synchronously before first paint.
   // This runs client-side only ('use client'), so no SSR conflict.
@@ -171,6 +174,34 @@ export default function FloatingNavigation() {
                     </Link>
                   </motion.div>
                 ))}
+
+                {/* Auth link */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.5, delay: 0.2 + (MENU_ITEMS.length * 0.05), ease: ANIMATIONS.ease.luxury }}
+                >
+                  <Link
+                    href={user ? '/account' : '/auth/login'}
+                    onClick={() => setIsOpen(false)}
+                    className="group relative font-display text-[clamp(24px,3.5vw,40px)] leading-none text-obsidian/50 hover:text-obsidian tracking-[-0.01em] block py-3 px-6"
+                  >
+                    <span className="relative z-10 inline-flex items-center gap-3">
+                      {user?.auth_provider === 'google' && user?.avatar_url && (
+                        <Image
+                          src={user.avatar_url}
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="rounded-full object-cover"
+                        />
+                      )}
+                      {user ? 'My Account' : 'Sign In'}
+                    </span>
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-1 w-0 h-[1px] bg-walnut transition-all duration-500 group-hover:w-[calc(100%-3rem)]" />
+                  </Link>
+                </motion.div>
               </nav>
 
               {/* Footer Links */}

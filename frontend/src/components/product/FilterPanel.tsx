@@ -15,9 +15,9 @@ interface FilterPanelProps {
 }
 
 const COLLECTIONS = [
-  { slug: 'walnut',   label: 'Walnut Series'       },
-  { slug: 'gallery',  label: 'Gallery Series'      },
-  { slug: 'heritage', label: 'Heritage Collection' },
+  { slug: 'box-frame',     label: 'Box Frame'         },
+  { slug: 'gallery-frame', label: 'Gallery Frame'      },
+  { slug: 'glass-frame',   label: 'Glass Frame'        },
 ]
 
 const SIZES = ['8" × 10"', '11" × 14"', '16" × 20"', '20" × 24"']
