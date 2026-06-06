@@ -43,6 +43,26 @@ export const metadata: Metadata = {
   },
 }
 
+// JSON-LD: Organization structured data
+const orgSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: BRAND.name,
+  url: BRAND.url,
+  logo: `${BRAND.url}/logo.png`,
+  description: 'Handcrafted premium photo frames and original wall art prints, made to order in India.',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    email: BRAND.email,
+    contactType: 'customer service',
+    availableLanguage: ['English', 'Hindi'],
+  },
+  sameAs: [
+    BRAND.instagram,
+    BRAND.pinterest,
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -60,6 +80,12 @@ export default function RootLayout({
         ${jost.variable}
       `}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        />
+      </head>
       <body className="min-h-full flex flex-col antialiased bg-obsidian text-ivory selection:bg-gold/30">
         <CartProvider>
           <WishlistProvider>

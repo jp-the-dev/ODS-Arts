@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Suspense } from 'react'
 import { getAllCollections, getCollectionBySlug } from '@/lib/services/collections'
 import { getProductsByCollection } from '@/lib/services/products'
@@ -45,11 +46,13 @@ export default async function CollectionPage({
 
       {/* ── Cinematic hero (kept from original) ── */}
       <section className="relative w-full h-[60vh] min-h-[480px] flex items-end justify-start overflow-hidden bg-obsidian">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={collection.imageSrc}
           alt={collection.imageAlt}
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/20 to-transparent" />
 

@@ -283,11 +283,31 @@ When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
 ### Phase 19: Products Listing Page (`/products`) [NEXT]
 **Goal:** Flat all-products listing (not grouped by collection). Uses the same FrameGrid + FilterPanel.
 
-### Phase 20: Responsiveness Audit [IN PROGRESS]
-**Goal:** Full audit across all pages at 375px, 768px (tablet), 1280px (14" laptop), 1920px. Known gaps: homepage hero on iPad, product configurator mobile layout.
+### Phase 20: Responsiveness Audit [COMPLETED — June 2026]
+- Added `overflow-x: hidden` globally to prevent mobile horizontal scroll
+- Added `touch-pan-x` to Art Teaser drag container for smooth native scrolling
+- Fixed FilterPanel z-index layering to correctly sit above navigation
+- Refined Custom Framing wizard layout on mobile (hide live preview panel, show only steps)
+- Fixed ArtConfigurator layout (qty stack, size grid)
 
-### Phase 21: Performance & SEO Polish
-**Goal:** Lighthouse audit, OG images for all routes, sitemap, robots.txt, reduced-motion support, accessibility pass, font loading optimisation.
+### Phase 21: Performance & SEO Polish [COMPLETED — June 2026]
+- Added root-level `sitemap.ts` mapping all static routes, collections, and dynamic art PDPs
+- Added complete `robots.ts` disallowing `/cart` and `/checkout`
+- Exported rich metadata from Homepage (`/`), Collection PDPs, and Art PDPs
+- Added `noindex` metadata to `/wishlist` via new layout wrapper
+- Added JSON-LD Organization schema (root layout) and Product schema (Art PDPs)
+- Generated brand-styled dynamic OG images for `/collections` and `/art` routes
+- Optimized LCP images (Collection hero) from `<img>` to `<Image priority sizes="100vw">`
+
+---
+
+## 4. Pending Roadmap
+
+### Phase 22: Gifting Page (`/gifting`) [PLANNING]
+**Goal:** Editorial landing page — gifting hero, 3 curated gift sets, corporate gifting section with lead form, gift process timeline.
+
+### Phase 23: Products Listing Page (`/products`) [NEXT]
+**Goal:** Flat all-products listing (not grouped by collection). Uses the same FrameGrid + FilterPanel.
 
 ---
 

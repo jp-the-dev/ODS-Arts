@@ -112,7 +112,7 @@ export default function ArtCollectionTeaser() {
           />
 
           {/* Drag track */}
-          <div ref={trackRef} className="overflow-hidden">
+          <div ref={trackRef} className="overflow-hidden touch-pan-x">
             <motion.div
               drag="x"
               dragConstraints={trackRef}
@@ -125,6 +125,13 @@ export default function ArtCollectionTeaser() {
               ))}
             </motion.div>
           </div>
+          {/* Mobile drag hint — small animated indicator */}
+          <p className="flex items-center justify-center gap-2 mt-4 sm:hidden font-body text-[9px] uppercase tracking-[0.2em] text-obsidian/30">
+            <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
+              <path d="M1 4h12M9 1l3 3-3 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Swipe to explore
+          </p>
         </div>
 
         {/* ── Bottom row: category links + CTA ── */}

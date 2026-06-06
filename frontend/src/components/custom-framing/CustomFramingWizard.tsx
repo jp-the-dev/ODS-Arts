@@ -56,9 +56,9 @@ export default function CustomFramingWizard() {
   return (
     <div className="flex flex-col lg:flex-row" style={{ background: '#1C1916', minHeight: 'calc(100vh - 68px)', marginTop: '68px' }}>
 
-      {/* ── LEFT: Live Frame Preview ──────────────────────────────────────── */}
+      {/* ── LEFT: Live Frame Preview — desktop only ───────────────────────── */}
       <div
-        className="lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:w-[45%] xl:w-[42%] flex-shrink-0 flex items-start lg:items-center justify-center order-2 lg:order-1 overflow-y-auto"
+        className="hidden lg:flex lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:w-[45%] xl:w-[42%] flex-shrink-0 items-center justify-center order-2 lg:order-1 overflow-y-auto"
         style={{ background: '#141210', borderRight: '1px solid rgba(255,255,255,0.06)' }}
       >
         <FramePreview config={config} estimatedPrice={estimatedPrice} />

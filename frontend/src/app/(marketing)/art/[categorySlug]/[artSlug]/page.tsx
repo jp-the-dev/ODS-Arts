@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getArtBySlug, getArtByCategory } from '@/lib/services/art'
 import { getArtCategory } from '@/lib/data/artCategories'
+import { BRAND } from '@/constants'
 import { MOCK_ART } from '@/lib/mock/art'
 import type { ArtStyle } from '@/lib/types/art'
 import ArtConfigurator from '@/components/art/ArtConfigurator'
@@ -39,8 +40,35 @@ export default async function ArtProductPage({ params }: Props) {
   const detailImg    = art.images.find((i) => i.role === 'detail')
   const relatedArt   = categoryArt.filter((a) => a.slug !== art.slug).slice(0, 3)
 
+  const lowestPrice = Math.min(...art.materialVariants.map(v => v.pricePaise)) / 100
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: art.name,
+    description: art.description,
+    image: heroImg ? `${BRAND.url}${heroImg.url}` : undefined,
+    offers: {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'INR',
+      lowPrice: lowestPrice,
+      offerCount: art.materialVariants.length,
+      availability: art.materialVariants.some(v => v.stockQty > 0)
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+    },
+    brand: {
+      '@type': 'Brand',
+      name: BRAND.name,
+    },
+  }
+
   return (
     <main className="bg-ivory min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* ── 2-column layout ── */}
       <div className="max-w-7xl mx-auto px-6 md:px-10 pt-28 pb-24">

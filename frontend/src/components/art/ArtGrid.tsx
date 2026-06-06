@@ -85,7 +85,7 @@ export default function ArtGrid({ initialArt }: ArtGridProps) {
   return (
     <div>
       {/* ── Controls bar ── */}
-      <div className="flex items-center gap-4 mb-8 flex-wrap">
+      <div className="flex items-center gap-3 mb-8 flex-wrap">
         {/* Filter toggle */}
         <button
           onClick={() => setShowFilters((s) => !s)}
@@ -102,11 +102,11 @@ export default function ArtGrid({ initialArt }: ArtGridProps) {
           )}
         </button>
 
-        {/* Sort */}
+        {/* Sort — full width on mobile */}
         <select
           value={activeSort}
           onChange={(e) => pushParams({ sort: e.target.value === 'recommended' ? null : e.target.value })}
-          className="font-body text-[11px] uppercase tracking-[0.15em] text-obsidian bg-transparent border border-obsidian/20 px-4 py-2.5 focus:outline-none focus:border-obsidian"
+          className="flex-1 sm:flex-none font-body text-[11px] uppercase tracking-[0.15em] text-obsidian bg-transparent border border-obsidian/20 px-4 py-2.5 focus:outline-none focus:border-obsidian"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>

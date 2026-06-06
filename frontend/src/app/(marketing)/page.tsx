@@ -2,6 +2,7 @@
 // Assembles all homepage sections in order.
 // Server Component (default)
 // Reference: agents/09-homepage-wireframe.md
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { HeroSection } from '@/components/hero'
 import FeaturedCollectionsSection from '@/components/sections/FeaturedCollectionsSection'
@@ -9,6 +10,15 @@ import ArtCollectionTeaser from '@/components/sections/ArtCollectionTeaser'
 import CraftsmanshipSection from '@/components/sections/CraftsmanshipSection'
 import CustomerHomesSection from '@/components/sections/CustomerHomesSection'
 import FinalCTASection from '@/components/sections/FinalCTASection'
+
+export const metadata: Metadata = {
+  title: 'ODSArts — Premium Frames & Wall Art, Made in India',
+  description:
+    'Handcrafted premium photo frames and original wall art prints. Canvas, photo paper, and fine art giclée. Made to order. Ships across India.',
+  alternates: {
+    canonical: '/',
+  },
+}
 
 export default function HomePage() {
   return (

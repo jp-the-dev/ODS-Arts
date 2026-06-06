@@ -93,7 +93,7 @@ export default function ArtConfigurator({ art }: ArtConfiguratorProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {sizesForMaterial.map((variant) => {
             const isSelected  = selectedVariant?.id === variant.id
             const isAvailable = variant.stockQty > 0
@@ -128,7 +128,7 @@ export default function ArtConfigurator({ art }: ArtConfiguratorProps) {
       </div>
 
       {/* ── Qty ── */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <span className="font-body text-[11px] uppercase tracking-[0.22em] text-obsidian">Qty</span>
         <div className="flex items-center border border-obsidian/15">
           <button
