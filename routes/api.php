@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ArtCategoryController;
 use App\Http\Controllers\Api\ArtController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\EnquiryController;
 use App\Http\Controllers\Api\FrameOptionController;
@@ -93,5 +94,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/auth/orders/{orderNumber}', [OrderController::class, 'show'])->name('auth.orders.show');
         Route::post('/auth/orders/{orderNumber}/pay', [PaymentController::class, 'pay'])->name('auth.orders.pay');
         Route::post('/auth/orders/{orderNumber}/verify', [PaymentController::class, 'verify'])->name('auth.orders.verify');
+
+        Route::get('/auth/cart', [CartController::class, 'index'])->name('auth.cart.index');
+        Route::post('/auth/cart/sync', [CartController::class, 'sync'])->name('auth.cart.sync');
     });
 });

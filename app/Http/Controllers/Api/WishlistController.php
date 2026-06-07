@@ -15,7 +15,7 @@ class WishlistController extends Controller
     public function index(Request $request): ResourceCollection
     {
         $items = $request->user()->wishlistItems()
-            ->with('product')
+            ->with('product.images', 'product.collection')
             ->latest()
             ->get();
 
@@ -33,7 +33,7 @@ class WishlistController extends Controller
         $item = $request->user()->wishlistItems()
             ->firstOrCreate(['product_id' => $product->id]);
 
-        $item->load('product');
+        $item->load('product.images', 'product.collection');
 
         return new WishlistItemResource($item);
     }
