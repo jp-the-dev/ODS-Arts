@@ -236,6 +236,33 @@ src/
 
 ---
 
+### Phase 18: Full Backend Integration & User Flows [COMPLETED — June 2026]
+
+#### 18A — Authentication & Security
+*   **Architecture:** Moved auth pages into a dedicated `(auth)` layout group, stripping out global navigation and footers for a focused, distraction-free experience.
+*   **UI:** Implemented premium full-screen split-panel designs for `/auth/login`, `/auth/register`, `/auth/forgot-password`, and `/auth/reset-password`.
+*   **Animations:** Staggered form fade-ins, page slides, dynamic error/success height transitions, and an animated gold checkmark upon successful login.
+*   **Sanctum/OAuth:** Fixed Google OAuth image domains in `next.config.ts`. Full Sanctum session persistence verified.
+
+#### 18B — Checkout & Payment Flow (Razorpay)
+*   **Bug Fix:** Resolved race condition where cancelling the Razorpay modal bypassed validation and incorrectly showed the "Order Placed" success screen.
+*   **Payment Gate:** The success screen is now strictly gated until the backend `/verify` endpoint completes successfully.
+*   **Retry Mechanism:** If a user cancels the modal or payment fails, they are shown a clear error with a "Retry Payment" button, allowing them to pay for the existing order without refilling the form.
+*   **Address Auto-fill:** Checkout form automatically populates with the user's default address upon login.
+*   **Address Selector:** Added a dynamic, card-based address picker at checkout to select from saved addresses or enter a new one.
+
+#### 18C — Account Dashboard
+*   **Complete Redesign:** Replaced the single-page form layout with a tabbed interface (Orders, Wishlist, Addresses, Profile, Security) using `AnimatePresence`.
+*   **Orders:** Accordion list with color-coded status badges and line-item details.
+*   **Addresses:** Card-based CRUD management for multiple addresses.
+
+#### 18D — Wishlist Integration Fixes
+*   **API Client:** Fixed double-unwrapping bug in `apiFetch` that caused wishlist items to return `undefined`.
+*   **Backend:** Updated `WishlistItemResource` and Controller to eager-load `product.images` and `collection`, returning `thumbnail` and `collection_slug`.
+*   **Frontend Linking:** Wishlist cards now link dynamically to `/collections/[collectionSlug]` instead of broken stub routes.
+
+---
+
 ## 3. Backend API Contract (For Laravel Developer)
 
 When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
@@ -254,6 +281,11 @@ When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
 | `GET /art?style=cultural&material=canvas&sort=price_asc` | GET | Filtered + paginated art |
 | `POST /orders` | POST | Place an order (supports mixed cart) |
 | `POST /custom-framing/quotes` | POST | Place a custom framing quote request |
+| `GET /auth/wishlist` | GET | Fetch user wishlist |
+| `POST /auth/wishlist` | POST | Add to wishlist |
+| `DELETE /auth/wishlist/:id` | DELETE | Remove from wishlist |
+| `GET /auth/addresses` | GET | Fetch user addresses |
+| `POST /auth/addresses` | POST | Create address |
 
 **Filter query params Laravel should support (Frames):**
 - `c` — comma-separated collection slugs: `walnut,gallery,heritage`
@@ -277,31 +309,33 @@ When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
 
 ## 4. Pending Roadmap
 
-### Phase 18: Gifting Page (`/gifting`) [PLANNING]
+### Phase 19: Gifting Page (`/gifting`) [PLANNING]
 **Goal:** Editorial landing page — gifting hero, 3 curated gift sets, corporate gifting section with lead form, gift process timeline.
 
-### Phase 19: Products Listing Page (`/products`) [NEXT]
+### Phase 20: Products Listing Page (`/products`) [NEXT]
 **Goal:** Flat all-products listing (not grouped by collection). Uses the same FrameGrid + FilterPanel.
 
-### Phase 20: Responsiveness Audit [IN PROGRESS]
+### Phase 21: Responsiveness Audit [IN PROGRESS]
 **Goal:** Full audit across all pages at 375px, 768px (tablet), 1280px (14" laptop), 1920px. Known gaps: homepage hero on iPad, product configurator mobile layout.
 
-### Phase 21: Performance & SEO Polish
+### Phase 22: Performance & SEO Polish
 **Goal:** Lighthouse audit, OG images for all routes, sitemap, robots.txt, reduced-motion support, accessibility pass, font loading optimisation.
 
 ---
 
 ## 5. Backend Integration Checklist (When Laravel is Ready)
 
-| What | How |
-|---|---|
-| Product data (real) | Set `NEXT_PUBLIC_USE_MOCK_DATA=false` — `lib/services/products.ts` auto-switches |
-| Filtered products | Same flag — `lib/services/products.ts::getFilteredProducts()` passes URL query params |
-| Search | Same flag — `lib/services/search.ts::searchProducts()` hits `GET /search?q=` |
-| Order submission | Same flag — `services/orders.service.ts` routes to `POST /orders` |
-| Custom framing quote | Same flag — `services/customFraming.service.ts` routes to `POST /custom-framing/quotes` |
-| Wishlist server sync | Add `useEffect` in `WishlistProvider` calling `GET /wishlist` on mount (authenticated users) |
-| Cart server sync | Add `useEffect` in `CartProvider` calling `GET /cart` on mount + `POST /cart/sync` on mutation |
-| Newsletter | Wire `src/app/api/newsletter/route.ts` to Laravel endpoint |
-| Contact form | Wire `src/app/api/contact/route.ts` to Laravel endpoint |
-| Collections/Testimonials | `src/services/collections.service.ts` + `testimonials.service.ts` are scaffolded and ready |
+| What | How | Status |
+|---|---|---|
+| Product data (real) | Set `NEXT_PUBLIC_USE_MOCK_DATA=false` | Pending |
+| Filtered products | URL query params mapping | Pending |
+| Search | Hits `GET /search?q=` | Pending |
+| Order submission | `POST /orders` + Razorpay Verify | **Complete** |
+| Custom framing quote | `POST /custom-framing/quotes` | Pending |
+| Wishlist server sync | `GET /wishlist` in Account & Context | **Complete** |
+| Address Management | `GET`/`POST`/`PUT` via Checkout/Account | **Complete** |
+| User Authentication | Sanctum flow (Login, Reg, Forgot Pw) | **Complete** |
+| Cart server sync | `GET /cart` + `POST /cart/sync` (JSON blob) | **Complete** |
+| Newsletter | Wire `api/newsletter/route.ts` | Pending |
+| Contact form | Wire `api/contact/route.ts` | Pending |
+

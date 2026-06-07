@@ -8,8 +8,9 @@ export interface WishlistItem {
     slug: string
     name: string
     tagline: string | null
-    price: number
-    thumbnail?: string
+    price: number        // in rupees (float) as returned by backend accessor
+    thumbnail: string | null
+    collection_slug: string | null
   }
   created_at: string
 }
@@ -18,17 +19,19 @@ export interface AddToWishlistInput {
   slug: string
 }
 
+// apiFetch auto-unwraps the top-level `data` envelope from Laravel resources.
+// WishlistItemResource::collection returns { data: [...] }  → apiFetch unwraps → WishlistItem[]
+// WishlistItemResource (single) returns { data: {...} }     → apiFetch unwraps → WishlistItem
+
 export async function getWishlist(): Promise<WishlistItem[]> {
-  const res = await apiFetch<{ data: WishlistItem[] }>('/auth/wishlist')
-  return res.data
+  return apiFetch<WishlistItem[]>('/auth/wishlist')
 }
 
 export async function addToWishlist(input: AddToWishlistInput): Promise<WishlistItem> {
-  const res = await apiFetch<{ data: WishlistItem }>('/auth/wishlist', {
+  return apiFetch<WishlistItem>('/auth/wishlist', {
     method: 'POST',
     body: JSON.stringify(input),
   })
-  return res.data
 }
 
 export async function removeFromWishlist(id: number): Promise<void> {

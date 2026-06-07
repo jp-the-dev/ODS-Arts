@@ -33,11 +33,9 @@ export interface Order {
 }
 
 export async function getOrders(): Promise<Order[]> {
-  const res = await apiFetch<{ data: Order[] }>('/auth/orders')
-  return res.data
+  return apiFetch<Order[]>('/auth/orders')
 }
 
 export async function getOrder(orderNumber: string): Promise<Order> {
-  const res = await apiFetch<{ data: Order }>(`/auth/orders/${orderNumber}`)
-  return res.data
+  return apiFetch<Order>(`/auth/orders/${orderNumber}`)
 }

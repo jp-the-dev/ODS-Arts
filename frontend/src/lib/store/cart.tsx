@@ -13,9 +13,11 @@
  * Persisted to localStorage so the cart survives page refreshes.
  */
 
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
 import type { CartItem, FrameCartItem, ProductVariant, FinishOption, Product } from '@/lib/types/product'
 import type { ArtProduct, ArtMaterialVariant, ArtCartItem } from '@/lib/types/art'
+import { useAuth } from '@/lib/store/auth'
+import { getCart, syncCart } from '@/lib/services/cart'
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
@@ -35,6 +37,7 @@ type CartAction =
   | { type: 'OPEN_DRAWER' }
   | { type: 'CLOSE_DRAWER' }
   | { type: 'HYDRATE';      payload: CartItem[] }
+  | { type: 'MERGE_SERVER_CART'; payload: CartItem[] }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +51,21 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'HYDRATE':
       return { ...state, items: action.payload }
+
+    case 'MERGE_SERVER_CART': {
+      const serverItems = action.payload
+      const newItems = [...state.items]
+
+      // Keep local items, but add server items that aren't already in the cart
+      for (const sItem of serverItems) {
+        const existing = newItems.find(i => i.key === sItem.key)
+        if (!existing) {
+          newItems.push(sItem)
+        }
+      }
+
+      return { ...state, items: newItems }
+    }
 
     case 'ADD_ITEM': {
       const { product, variant, finish, quantity } = action.payload
@@ -163,6 +181,9 @@ const STORAGE_KEY = 'odsarts_cart_v1'
 // ── Provider ───────────────────────────────────────────────────────────────────
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  const [initialHydrated, setInitialHydrated] = useState(false)
+
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     isDrawerOpen: false,
@@ -178,16 +199,41 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore corrupt storage
     }
+    setInitialHydrated(true)
   }, [])
 
-  // Persist to localStorage on every change
+  // Fetch and merge server cart when user logs in
   useEffect(() => {
+    if (user && initialHydrated) {
+      getCart()
+        .then((res) => {
+          if (res.items && res.items.length > 0) {
+            dispatch({ type: 'MERGE_SERVER_CART', payload: res.items })
+          }
+        })
+        .catch(() => {
+          // Ignore fetch errors
+        })
+    }
+  }, [user, initialHydrated])
+
+  // Persist to localStorage AND server on every change
+  useEffect(() => {
+    if (!initialHydrated) return
+
+    // Save to local storage
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items))
     } catch {
       // Ignore storage quota errors
     }
-  }, [state.items])
+
+    // Sync to server if logged in
+    if (user) {
+      // Using fire-and-forget for background sync
+      syncCart(state.items).catch(() => {})
+    }
+  }, [state.items, user, initialHydrated])
 
   const addItem = useCallback(
     (product: Product, variant: ProductVariant, finish: FinishOption, quantity = 1) =>

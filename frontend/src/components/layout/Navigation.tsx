@@ -36,6 +36,9 @@ export default function Navigation() {
     )
   )
 
+  // Determine if the current page has a dark background at the top and we haven't scrolled yet
+  const isDarkNav = pathname === '/account' && !isScrolled
+
   return (
     <>
     <motion.header
@@ -52,7 +55,9 @@ export default function Navigation() {
           <div className="flex-1 lg:flex-none">
             <Link
               href="/"
-              className="font-display-heading text-[22px] md:text-h3 text-obsidian tracking-wide hover:text-walnut transition-colors duration-300"
+              className={`font-display-heading text-[22px] md:text-h3 tracking-wide transition-colors duration-300 ${
+                isDarkNav ? 'text-ivory hover:text-gold' : 'text-obsidian hover:text-walnut'
+              }`}
             >
               {BRAND.name}
             </Link>
@@ -64,7 +69,9 @@ export default function Navigation() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-body text-label uppercase tracking-label text-obsidian/65 hover:text-obsidian transition-colors duration-300"
+                className={`font-body text-label uppercase tracking-label transition-colors duration-300 ${
+                  isDarkNav ? 'text-ivory/70 hover:text-ivory' : 'text-obsidian/65 hover:text-obsidian'
+                }`}
               >
                 {link.label}
               </Link>
@@ -76,7 +83,9 @@ export default function Navigation() {
             {/* Search icon */}
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+              className={`w-9 h-9 flex items-center justify-center transition-colors focus:outline-none ${
+                isDarkNav ? 'text-ivory/80 hover:text-ivory' : 'text-obsidian/60 hover:text-obsidian'
+              }`}
               aria-label="Search frames"
             >
               <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
@@ -88,7 +97,9 @@ export default function Navigation() {
             {/* Cart icon with live count badge */}
             <button
               onClick={openDrawer}
-              className="relative w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+              className={`relative w-9 h-9 flex items-center justify-center transition-colors focus:outline-none ${
+                isDarkNav ? 'text-ivory/80 hover:text-ivory' : 'text-obsidian/60 hover:text-obsidian'
+              }`}
               aria-label={`Open cart — ${totalItems} item${totalItems !== 1 ? 's' : ''}`}
             >
               <svg width="18" height="17" viewBox="0 0 18 17" fill="none">
@@ -107,11 +118,13 @@ export default function Navigation() {
             </button>
 
             {/* Auth link */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:flex items-center justify-center">
               {user ? (
                 <Link
                   href="/account"
-                  className="font-body text-label uppercase tracking-label text-obsidian/65 hover:text-obsidian transition-colors"
+                  className={`font-body text-label uppercase tracking-label transition-colors flex items-center justify-center h-9 w-9 ${
+                    isDarkNav ? 'text-ivory/80 hover:text-ivory' : 'text-obsidian/65 hover:text-obsidian'
+                  }`}
                   aria-label="My account"
                 >
                   {user.auth_provider === 'google' && user.avatar_url ? (
@@ -132,17 +145,23 @@ export default function Navigation() {
               ) : (
                 <Link
                   href="/auth/login"
-                  className="font-body text-label uppercase tracking-label text-obsidian/65 hover:text-obsidian transition-colors"
+                  className={`font-body text-label uppercase tracking-label transition-colors ${
+                    isDarkNav ? 'text-ivory/80 hover:text-ivory' : 'text-obsidian/65 hover:text-obsidian'
+                  }`}
                 >
                   Sign In
                 </Link>
               )}
             </div>
 
-            <div className="hidden lg:block">
+            <div className="hidden lg:block ml-2">
               <Link
                 href="/collections"
-                className="font-body text-[11px] uppercase tracking-[0.22em] text-obsidian border border-obsidian/25 hover:border-obsidian px-5 py-3 transition-all duration-300 hover:bg-obsidian hover:text-ivory"
+                className={`font-body text-[11px] uppercase tracking-[0.22em] px-5 py-3 transition-all duration-300 ${
+                  isDarkNav
+                    ? 'text-ivory border border-ivory/30 hover:border-ivory hover:bg-ivory hover:text-obsidian'
+                    : 'text-obsidian border border-obsidian/25 hover:border-obsidian hover:bg-obsidian hover:text-ivory'
+                }`}
               >
                 Explore Collection
               </Link>
