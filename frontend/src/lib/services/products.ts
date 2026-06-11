@@ -67,6 +67,16 @@ type GetProductsResponse = ApiProduct[]
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true'
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1')
+  .replace(/\/api\/v1\/?$/, '')
+
+/** Turn a relative backend path like /images/foo.png into an absolute URL. */
+function resolveImageUrl(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
 // ── Lowest price helper ───────────────────────────────────────────────────────
 
 function lowestPrice(p: Product) {
@@ -77,7 +87,7 @@ function lowestPrice(p: Product) {
 
 function toFrontendProduct(p: ApiProduct): Product {
   const images: ProductImageType[] = p.images.map((img, i) => ({
-    url: img.url,
+    url: resolveImageUrl(img.url),
     alt: img.alt || p.name,
     role: i === 0 ? 'hero' : 'detail',
   }))
@@ -125,8 +135,18 @@ export async function getProductsByCollection(
     await Promise.resolve()
     return MOCK_PRODUCTS.filter((p) => p.collectionSlug === collectionSlug)
   }
-  const all = await getAllProducts()
-  return all.filter((p) => p.collectionSlug === collectionSlug)
+  // Real API: GET /collections/{slug}/products — targeted endpoint
+  // Falls back to filtering all products if the dedicated route isn't available
+  try {
+    const raw = await apiFetch<ApiProduct[]>(`/collections/${collectionSlug}/products`, {
+      revalidate: 3600,
+    })
+    return raw.map(toFrontendProduct)
+  } catch {
+    // Fallback: fetch all and filter locally
+    const all = await getAllProducts()
+    return all.filter((p) => p.collectionSlug === collectionSlug)
+  }
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -135,8 +155,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     return MOCK_PRODUCTS.find((p) => p.slug === slug) ?? null
   }
   try {
-    const raw = await apiFetch<{ data: ApiProduct }>(`/products/${slug}`)
-    return toFrontendProduct(raw.data)
+    const raw = await apiFetch<ApiProduct>(`/products/${slug}`)
+    return toFrontendProduct(raw)
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null
     throw error

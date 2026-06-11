@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     // Collections
     Route::get('/collections', [CollectionController::class, 'index'])->name('collections.index');
+    Route::get('/collections/{slug}/products', [CollectionController::class, 'products'])->name('collections.products');
     Route::get('/collections/{slug}', [CollectionController::class, 'show'])->name('collections.show');
 
     // Products
@@ -60,6 +62,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     // Newsletter
     Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
+
+    // Full-text search (frames + art)
+    Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
     // Webhooks (no auth)
     Route::post('/webhooks/razorpay', [PaymentController::class, 'webhook'])->name('webhooks.razorpay');

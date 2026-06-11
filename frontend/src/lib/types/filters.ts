@@ -38,25 +38,25 @@ export interface ProductFilterParams {
 /** Serialize a filter params object to URLSearchParams */
 export function serializeFilters(params: ProductFilterParams): URLSearchParams {
   const sp = new URLSearchParams()
-  if (params.collections?.length)  sp.set('c',    params.collections.join(','))
-  if (params.sizes?.length)        sp.set('s',    params.sizes.join('|'))
-  if (params.minPricePaise)        sp.set('min',  String(params.minPricePaise))
-  if (params.maxPricePaise)        sp.set('max',  String(params.maxPricePaise))
-  if (params.inStockOnly)          sp.set('stock','1')
+  if (params.collections?.length)  sp.set('c',         params.collections.join(','))
+  if (params.sizes?.length)        sp.set('s',         params.sizes.join('|'))
+  if (params.minPricePaise)        sp.set('min_price', String(params.minPricePaise))
+  if (params.maxPricePaise)        sp.set('max_price', String(params.maxPricePaise))
+  if (params.inStockOnly)          sp.set('in_stock',  '1')
   if (params.sort && params.sort !== 'recommended') sp.set('sort', params.sort)
-  if (params.query)                sp.set('q',    params.query)
-  if (params.page && params.page > 1) sp.set('page', String(params.page))
+  if (params.query)                sp.set('q',         params.query)
+  if (params.page && params.page > 1) sp.set('page',   String(params.page))
   return sp
 }
 
 /** Parse URLSearchParams back into ProductFilterParams */
 export function deserializeFilters(sp: URLSearchParams): ProductFilterParams {
   return {
-    collections: sp.get('c') ? sp.get('c')!.split(',') : undefined,
-    sizes:       sp.get('s') ? sp.get('s')!.split('|') : undefined,
-    minPricePaise: sp.get('min') ? Number(sp.get('min')) : undefined,
-    maxPricePaise: sp.get('max') ? Number(sp.get('max')) : undefined,
-    inStockOnly:   sp.get('stock') === '1',
+    collections:   sp.get('c') ? sp.get('c')!.split(',') : undefined,
+    sizes:         sp.get('s') ? sp.get('s')!.split('|') : undefined,
+    minPricePaise: sp.get('min_price') ? Number(sp.get('min_price')) : undefined,
+    maxPricePaise: sp.get('max_price') ? Number(sp.get('max_price')) : undefined,
+    inStockOnly:   sp.get('in_stock') === '1',
     sort:          (sp.get('sort') as SortKey) || 'recommended',
     query:         sp.get('q') ?? undefined,
     page:          sp.get('page') ? Number(sp.get('page')) : 1,

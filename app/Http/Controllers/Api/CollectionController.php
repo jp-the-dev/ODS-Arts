@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CollectionResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -37,5 +38,27 @@ class CollectionController extends Controller
         }
 
         return new CollectionResource($collection);
+    }
+
+    /**
+     * GET /api/v1/collections/{slug}/products — list all active products in a collection.
+     *
+     * Returns a flat ProductResource collection — same shape as GET /products.
+     */
+    public function products(string $slug): AnonymousResourceCollection|JsonResponse
+    {
+        $collection = Collection::active()->where('slug', $slug)->first();
+
+        if (! $collection) {
+            return response()->json(['message' => 'Collection not found.'], 404);
+        }
+
+        $products = $collection->products()
+            ->active()
+            ->with(['images', 'collection.finishOptions', 'variants'])
+            ->orderBy('sort_order')
+            ->get();
+
+        return ProductResource::collection($products);
     }
 }

@@ -13,6 +13,16 @@ import type { ArtProduct, ArtStyle, PrintMaterial, ArtMaterialVariant } from '@/
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true'
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1')
+  .replace(/\/api\/v1\/?$/, '')
+
+/** Turn a relative backend path like /images/foo.png into an absolute URL. */
+function resolveImageUrl(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
 // ── API response shapes ───────────────────────────────────────────────────────
 
 interface ApiArtImage {
@@ -83,7 +93,7 @@ function toFrontendArtProduct(p: ApiArtProduct): ArtProduct {
     currency: 'INR',
     materialVariants,
     images: p.images.map((img) => ({
-      url: img.url,
+      url: resolveImageUrl(img.url),
       alt: img.alt ?? '',
       role: img.role as 'hero' | 'detail' | 'lifestyle',
     })),

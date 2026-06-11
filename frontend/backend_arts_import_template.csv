@@ -1,0 +1,3 @@
+category_slug,art_name,art_slug,tagline,description,artist,medium,delivery_days,tags_json,is_featured,is_active,variant_sku,variant_material,variant_size_label,variant_dimensions_cm,variant_price_paise,variant_stock_qty,variant_weight_grams
+"abstract","Golden Horizon","golden-horizon","A touch of morning light","Beautiful abstract piece.","ODSArts Studio","Acrylic on Canvas",10,"[\"abstract\",\"gold\",\"modern\"]",1,1,"ART-GH-CANVAS-SM","Canvas","Small (12x16)","30.4x40.6",150000,10,500
+"abstract","Golden Horizon","golden-horizon","A touch of morning light","Beautiful abstract piece.","ODSArts Studio","Acrylic on Canvas",10,"[\"abstract\",\"gold\",\"modern\"]",1,1,"ART-GH-PAPER-SM","Fine Art Paper","Small (12x16)","30.4x40.6",120000,25,200

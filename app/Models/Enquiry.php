@@ -17,11 +17,13 @@ class Enquiry extends Model
         'phone',
         'message',
         'type',
+        'metadata',
         'status',
     ];
 
     protected $casts = [
-        'type' => 'string',
-        'status' => 'string',
+        'type'     => 'string',
+        'status'   => 'string',
+        'metadata' => 'array',
     ];
 }
