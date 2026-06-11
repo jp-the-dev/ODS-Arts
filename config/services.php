@@ -42,9 +42,18 @@ return [
     ],
 
     'razorpay' => [
-        'key' => env('RAZORPAY_KEY'),
-        'secret' => env('RAZORPAY_SECRET'),
+        'key'            => env('RAZORPAY_KEY'),
+        'secret'         => env('RAZORPAY_SECRET'),
         'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
+    ],
+
+    'shiprocket' => [
+        'email'           => env('SHIPROCKET_EMAIL'),
+        'password'        => env('SHIPROCKET_PASSWORD'),
+        'pickup_postcode' => env('SHIPROCKET_PICKUP_POSTCODE', '360002'),
+        'courier_mode'    => env('SHIPROCKET_COURIER_MODE', 'auto_cheapest'),
+        'dry_run'         => env('SHIPROCKET_DRY_RUN', true),
+        'base_url'        => 'https://apiv2.shiprocket.in/v1/external',
     ],
 
 ];

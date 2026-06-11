@@ -32,14 +32,24 @@ class Order extends Model
         'razorpay_order_id',
         'razorpay_payment_id',
         'razorpay_signature',
+        // Shiprocket shipping fields
+        'shiprocket_order_id',
+        'shiprocket_shipment_id',
+        'awb_code',
+        'courier_id',
+        'courier_name',
+        'estimated_delivery_date',
+        'shiprocket_status',
+        'pickup_pincode',
     ];
 
     protected function casts(): array
     {
         return [
-            'billing_address' => 'array',
-            'shipping_address' => 'array',
-            'ordered_at' => 'datetime',
+            'billing_address'         => 'array',
+            'shipping_address'        => 'array',
+            'ordered_at'              => 'datetime',
+            'estimated_delivery_date' => 'date',
         ];
     }
 

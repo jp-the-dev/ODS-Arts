@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\CreateShiprocketOrderJob;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -72,12 +73,16 @@ class PaymentController extends Controller
         }
 
         $order->update([
-            'payment_status' => 'paid',
-            'status' => 'confirmed',
-            'payment_method' => 'razorpay',
+            'payment_status'      => 'paid',
+            'status'              => 'confirmed',
+            'payment_method'      => 'razorpay',
             'razorpay_payment_id' => $validated['razorpay_payment_id'],
-            'razorpay_signature' => $validated['razorpay_signature'],
+            'razorpay_signature'  => $validated['razorpay_signature'],
         ]);
+
+        // Dispatch Shiprocket order creation asynchronously
+        // This does not block the payment response — runs in background queue
+        dispatch(new CreateShiprocketOrderJob($order));
 
         return response()->json(['message' => 'Payment verified successfully']);
     }

@@ -14,7 +14,9 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\TestimonialController;
+use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -66,8 +68,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     // Full-text search (frames + art)
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
+    // Shipping rates (public — called at checkout before payment)
+    Route::get('/shipping/rates', [ShippingController::class, 'rates'])->name('shipping.rates');
+
     // Webhooks (no auth)
     Route::post('/webhooks/razorpay', [PaymentController::class, 'webhook'])->name('webhooks.razorpay');
+    Route::post('/webhooks/shiprocket', [ShippingController::class, 'webhook'])->name('webhooks.shiprocket');
 
     // Auth — guest
     Route::post('/auth/register', [AuthController::class, 'register'])->name('auth.register');
@@ -97,6 +103,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/auth/orders', [OrderController::class, 'index'])->name('auth.orders.index');
         Route::post('/auth/orders', [OrderController::class, 'store'])->name('auth.orders.store');
         Route::get('/auth/orders/{orderNumber}', [OrderController::class, 'show'])->name('auth.orders.show');
+        Route::get('/auth/orders/{orderNumber}/tracking', [TrackingController::class, 'show'])->name('auth.orders.tracking');
         Route::post('/auth/orders/{orderNumber}/pay', [PaymentController::class, 'pay'])->name('auth.orders.pay');
         Route::post('/auth/orders/{orderNumber}/verify', [PaymentController::class, 'verify'])->name('auth.orders.verify');
 
