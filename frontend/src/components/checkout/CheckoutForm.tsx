@@ -301,14 +301,14 @@ export default function CheckoutForm() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.25, 0, 0, 1] }}
-        className="flex flex-col items-center text-center py-16 px-6"
+        className="flex flex-col items-center justify-center text-center py-24 px-6 min-h-[60vh] max-w-3xl mx-auto"
       >
         {/* Animated gold circle with checkmark */}
-        <div className="relative w-20 h-20 mb-8">
+        <div className="relative w-24 h-24 mb-10">
           <motion.svg
             viewBox="0 0 80 80"
             fill="none"
-            className="w-20 h-20"
+            className="w-24 h-24"
             initial={{ rotate: -90 }}
             animate={{ rotate: 0 }}
             transition={{ duration: 0.6, ease: [0.25, 0, 0, 1] }}
@@ -328,7 +328,7 @@ export default function CheckoutForm() {
           <motion.svg
             viewBox="0 0 24 24"
             fill="none"
-            className="w-8 h-8 absolute inset-0 m-auto"
+            className="w-10 h-10 absolute inset-0 m-auto"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, delay: 0.7, ease: [0.25, 0, 0, 1] }}
@@ -344,22 +344,21 @@ export default function CheckoutForm() {
         </div>
 
         {/* Order confirmed */}
-        <p className="font-body text-[10px] uppercase tracking-[0.35em] text-gold mb-3">
-          Order Placed
+        <p className="font-body text-[11px] uppercase tracking-[0.35em] text-gold mb-4">
+          Order Confirmed
         </p>
-        <h1 className="font-display text-[clamp(32px,4vw,52px)] text-obsidian leading-tight mb-4">
-          Your order has been placed.
+        <h1 className="font-display text-[clamp(40px,5vw,64px)] text-obsidian leading-tight mb-6">
+          Thank you.
         </h1>
-        <div className="h-[1px] w-12 bg-gold/50 mb-6" />
 
-        {/* Reference number */}
-        <div className="bg-ivory-200 border border-obsidian/8 px-8 py-4 mb-6">
+        <div className="bg-obsidian/[0.03] border border-obsidian/10 px-8 py-5 mb-8 inline-block">
           <p className="font-body text-[10px] uppercase tracking-[0.25em] text-pewter mb-1">
             Order Reference
           </p>
-          <p className="font-display text-2xl text-obsidian tracking-wider">{orderRef}</p>
+          <p className="font-display text-xl text-obsidian tracking-wider">
+            {orderRef}
+          </p>
         </div>
-
         {/* Message */}
         <p className="font-body text-[14px] leading-[1.8] text-pewter-dark max-w-sm mb-10">
           A confirmation email has been sent to{' '}
@@ -404,6 +403,18 @@ export default function CheckoutForm() {
 
   return (
     <>
+      <div className="mb-10 md:mb-14">
+        <p className="font-body text-[10px] uppercase tracking-[0.3em] text-gold mb-2">
+          Final Step
+        </p>
+        <h1 className="font-display text-[clamp(32px,4vw,56px)] text-obsidian leading-tight">
+          Complete Your Order
+        </h1>
+        <div className="h-[1px] w-12 bg-gold/50 mt-4" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-12 lg:gap-16 items-start">
+        <div className="relative">
       {/* Login Prompt Overlay */}
       <AnimatePresence>
         {showLoginPrompt && (
@@ -858,12 +869,22 @@ export default function CheckoutForm() {
           )}
         </motion.button>
 
-        <p className="font-body text-[11px] text-center text-pewter leading-relaxed">
+        <p className="font-body text-[11px] text-center text-pewter leading-relaxed mt-2">
           Secured by <span className="text-obsidian">Razorpay</span>. Your payment
           information is encrypted and processed safely.
         </p>
       </div>
-    </form>
+
+      </form>
+        </div>
+
+        <div className="lg:sticky lg:top-24">
+          <CheckoutOrderSummary 
+            selectedCourier={selectedCourier} 
+            shippingLoading={shippingLoading} 
+          />
+        </div>
+      </div>
     </>
   )
 }
