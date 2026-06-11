@@ -84,7 +84,7 @@ src/
 
 > **Framer Motion is SAFE for:** `useScroll + useTransform` (parallax), `whileHover`, `AnimatePresence` (drawers/modals).
 
-> **Mock vs Real API:** Set `NEXT_PUBLIC_USE_MOCK_DATA=false` in `.env.local` to switch the entire data layer from mock to Laravel API. No UI code changes required.
+> **Mock vs Real API:** `NEXT_PUBLIC_USE_MOCK_DATA` defaults to `'true'`. Set to `'false'` in `.env.local` to switch the entire data layer from mock to Laravel API. **Phase 22 COMPLETE — backend is live at `localhost:8000`.**
 
 > **URL as state:** All filter/sort/search state lives in URL searchParams via `useSearchParams` + `useRouter`. Never useState alone for filters — it makes pages unshare-able and breaks back navigation.
 
@@ -287,11 +287,11 @@ When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
 | `GET /auth/addresses` | GET | Fetch user addresses |
 | `POST /auth/addresses` | POST | Create address |
 
-**Filter query params Laravel should support (Frames):**
+**Filter query params supported (Frames) — LIVE:**
 - `c` — comma-separated collection slugs: `walnut,gallery,heritage`
 - `s` — pipe-separated size labels: `8" × 10"|11" × 14"`
 - `min_price` / `max_price` — integers in paise
-- `stock` — `1` = in-stock only
+- `in_stock` — `1` = in-stock only
 - `sort` — `recommended | price_asc | price_desc | newest | delivery_asc`
 - `page` / `per_page` — pagination
 - `q` — full-text search string
@@ -304,6 +304,24 @@ When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
 - `stock` — `1`
 - `sort` — `recommended | price_asc | price_desc | newest`
 - `q` — full-text search
+
+---
+
+### Phase 22: Go Live — Real Data Switch [COMPLETED — June 2026]
+**Goal:** Wire all frontend data layers to live Laravel backend (`NEXT_PUBLIC_USE_MOCK_DATA=false`).
+
+**What was done:**
+- Fixed DB collection slugs: `box-frame→walnut`, `gallery-frame→gallery`, `glass-frame→heritage` (zero URL breakage)
+- Added `GET /search` route + `SearchController` (full-text across frames + art)
+- Upgraded `ProductController@index` with full filter support (`c`, `s`, `sort`, `min_price`, `max_price`, `in_stock`, `q`)
+- Added `GET /collections/{slug}/products` endpoint
+- Added `metadata` JSON column to `enquiries` (for custom framing structured data)
+- Fixed `customFraming.service.ts` to map to `POST /enquiries` with `type: custom_framing`
+- Fixed `resolveImageUrl()` in product + art services to prepend `API_BASE` to relative image paths
+- Fixed double-unwrap bug in `getProductBySlug()`
+- Fixed filter serializer param names (`min_price`/`max_price`/`in_stock`) to match backend
+- All 9 frame products + 18 art products live from real DB
+- Newsletter + Contact form API routes verified live
 
 ---
 
@@ -323,19 +341,19 @@ When `NEXT_PUBLIC_USE_MOCK_DATA=false`, the frontend calls:
 
 ---
 
-## 5. Backend Integration Checklist (When Laravel is Ready)
+## 5. Backend Integration Checklist
 
 | What | How | Status |
 |---|---|---|
-| Product data (real) | Set `NEXT_PUBLIC_USE_MOCK_DATA=false` | Pending |
-| Filtered products | URL query params mapping | Pending |
-| Search | Hits `GET /search?q=` | Pending |
-| Order submission | `POST /orders` + Razorpay Verify | **Complete** |
-| Custom framing quote | `POST /custom-framing/quotes` | Pending |
-| Wishlist server sync | `GET /wishlist` in Account & Context | **Complete** |
-| Address Management | `GET`/`POST`/`PUT` via Checkout/Account | **Complete** |
-| User Authentication | Sanctum flow (Login, Reg, Forgot Pw) | **Complete** |
-| Cart server sync | `GET /cart` + `POST /cart/sync` (JSON blob) | **Complete** |
-| Newsletter | Wire `api/newsletter/route.ts` | Pending |
-| Contact form | Wire `api/contact/route.ts` | Pending |
+| Product data (real) | Set `NEXT_PUBLIC_USE_MOCK_DATA=false` | **✅ Complete** |
+| Filtered products | URL query params mapping | **✅ Complete** |
+| Search | Hits `GET /search?q=` | **✅ Complete** |
+| Order submission | `POST /orders` + Razorpay Verify | **✅ Complete** |
+| Custom framing quote | `POST /enquiries` type:custom_framing | **✅ Complete** |
+| Wishlist server sync | `GET /wishlist` in Account & Context | **✅ Complete** |
+| Address Management | `GET`/`POST`/`PUT` via Checkout/Account | **✅ Complete** |
+| User Authentication | Sanctum flow (Login, Reg, Forgot Pw) | **✅ Complete** |
+| Cart server sync | `GET /cart` + `POST /cart/sync` (JSON blob) | **✅ Complete** |
+| Newsletter | `POST /newsletter/subscribe` via route.ts | **✅ Complete** |
+| Contact form | `POST /enquiries` via route.ts | **✅ Complete** |
 
