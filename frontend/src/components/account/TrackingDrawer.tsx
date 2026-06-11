@@ -108,7 +108,7 @@ export default function TrackingDrawer({ orderNumber, onClose }: TrackingDrawerP
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-40 bg-obsidian/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[95] bg-obsidian/60 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -119,7 +119,7 @@ export default function TrackingDrawer({ orderNumber, onClose }: TrackingDrawerP
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ duration: 0.4, ease: [0.25, 0, 0, 1] }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[420px] bg-[#161614] flex flex-col overflow-hidden shadow-2xl"
+            className="fixed right-0 top-0 bottom-0 z-[100] w-full max-w-[420px] bg-[#161614] flex flex-col overflow-hidden shadow-2xl"
           >
             {/* Header */}
             <div className="px-6 pt-8 pb-5 border-b border-white/8">
