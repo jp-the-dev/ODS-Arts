@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/lib/store/cart'
@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/store/auth'
 import { useRouter } from 'next/navigation'
 import { initiatePayment } from '@/lib/services/razorpay'
 import { placeOrder, buildOrderRequest } from '@/services/orders.service'
+import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary'
+import type { ShippingCourier, ShippingRatesResponse } from '@/lib/types/shipping'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -114,6 +116,46 @@ export default function CheckoutForm() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [selectedAddressId, setSelectedAddressId] = useState<number | 'new'>('new')
 
+  // ── Shipping state ────────────────────────────────────────────────────────
+  const [shippingCouriers, setShippingCouriers]     = useState<ShippingCourier[]>([])
+  const [selectedCourier, setSelectedCourier]       = useState<ShippingCourier | null>(null)
+  const [shippingLoading, setShippingLoading]       = useState(false)
+  const shippingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Fetch shipping rates when pincode is 6 digits (debounced 350ms)
+  const fetchShippingRates = useCallback(async (pincode: string) => {
+    if (!/^\d{6}$/.test(pincode)) {
+      setShippingCouriers([])
+      setSelectedCourier(null)
+      return
+    }
+    setShippingLoading(true)
+    try {
+      // Estimate total cart weight (500g per item if no data)
+      const totalWeight = 500 * items.reduce((sum, i) => sum + i.quantity, 0)
+      const res = await fetch(`/api/shipping-rates?postcode=${pincode}&weight=${totalWeight}`)
+      const data: ShippingRatesResponse = await res.json()
+      setShippingCouriers(data.couriers ?? [])
+      // Auto-select recommended (cheapest)
+      setSelectedCourier(data.recommended ?? data.couriers?.[0] ?? null)
+    } catch {
+      setShippingCouriers([])
+      setSelectedCourier(null)
+    } finally {
+      setShippingLoading(false)
+    }
+  }, [items])
+
+  useEffect(() => {
+    if (shippingDebounceRef.current) clearTimeout(shippingDebounceRef.current)
+    shippingDebounceRef.current = setTimeout(() => {
+      fetchShippingRates(form.pincode)
+    }, 350)
+    return () => {
+      if (shippingDebounceRef.current) clearTimeout(shippingDebounceRef.current)
+    }
+  }, [form.pincode, fetchShippingRates])
+
   // Auto-fill from user profile (and default address) when loaded
   useEffect(() => {
     if (user && form.email === '') {
@@ -200,7 +242,14 @@ export default function CheckoutForm() {
 
     try {
       const response = await placeOrder(
-        buildOrderRequest(form, items, subtotalPaise)
+        buildOrderRequest(
+          form,
+          items,
+          subtotalPaise,
+          selectedCourier?.rate_paise ?? 0,
+          selectedCourier?.courier_id ?? null,
+          selectedCourier?.courier_name ?? null,
+        )
       )
       await attemptPayment(response.orderReference)
     } catch (error: any) {
@@ -671,6 +720,81 @@ export default function CheckoutForm() {
         </Field>
       </section>
 
+      {/* ── Section 2.5: Shipping Method ── */}
+      <AnimatePresence>
+        {(shippingLoading || shippingCouriers.length > 0) && (
+          <motion.section
+            key="shipping-section"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.4, ease: [0.25, 0, 0, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="font-body text-[10px] uppercase tracking-[0.3em] text-gold mb-1">2.5</p>
+                <h2 className="font-display text-[clamp(20px,2vw,28px)] text-obsidian">
+                  Shipping Method
+                </h2>
+                <div className="h-[1px] w-10 bg-gold/50 mt-3" />
+              </div>
+
+              {shippingLoading ? (
+                <div className="flex flex-col gap-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-[72px] bg-obsidian/5 animate-pulse border border-obsidian/8" />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {shippingCouriers.slice(0, 5).map((courier, i) => (
+                    <motion.button
+                      key={courier.courier_id}
+                      type="button"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05, duration: 0.25 }}
+                      onClick={() => setSelectedCourier(courier)}
+                      className={`w-full flex items-center justify-between px-5 py-4 border text-left transition-all duration-200 group ${
+                        selectedCourier?.courier_id === courier.courier_id
+                          ? 'border-gold bg-gold/5'
+                          : 'border-obsidian/12 hover:border-obsidian/30 bg-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Radio dot */}
+                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+                          selectedCourier?.courier_id === courier.courier_id
+                            ? 'border-gold'
+                            : 'border-obsidian/25'
+                        }`}>
+                          {selectedCourier?.courier_id === courier.courier_id && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-gold" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-body text-[13px] text-obsidian font-medium">
+                            {courier.courier_name}
+                          </p>
+                          <p className="font-body text-[11px] text-pewter">
+                            {courier.estimated_delivery_days} working days
+                            {courier.etd ? ` · by ${courier.etd}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-body text-[15px] text-obsidian tabular-nums flex-shrink-0">
+                        ₹{(courier.rate_paise / 100).toLocaleString('en-IN')}
+                      </p>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
       {/* ── Submit ── */}
       <div className="flex flex-col gap-4 border-t border-obsidian/8 pt-8">
         {errors.form && (
@@ -713,38 +837,22 @@ export default function CheckoutForm() {
         >
           {isSubmitting || loading ? (
             <>
-              <svg
-                className="animate-spin w-4 h-4 opacity-70"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v2a6 6 0 00-6 6H4z"
-                />
+              <svg className="animate-spin w-4 h-4 opacity-70" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v2a6 6 0 00-6 6H4z" />
               </svg>
               {loading ? 'Verifying Session…' : 'Processing…'}
             </>
           ) : (
             <>
-              Pay ₹{(subtotalPaise / 100).toLocaleString('en-IN')}
+              Pay ₹{((subtotalPaise + (selectedCourier?.rate_paise ?? 0)) / 100).toLocaleString('en-IN')}
+              {selectedCourier && (
+                <span className="opacity-50 text-[10px] normal-case tracking-normal">
+                  incl. ₹{(selectedCourier.rate_paise / 100).toFixed(0)} shipping
+                </span>
+              )}
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
-                <path
-                  d="M1 7h12M8 3l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <path d="M1 7h12M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </>
           )}

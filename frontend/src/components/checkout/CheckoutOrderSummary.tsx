@@ -3,9 +3,18 @@
 import Image from 'next/image'
 import { useCart } from '@/lib/store/cart'
 import { formatPrice } from '@/lib/types/product'
+import type { ShippingCourier } from '@/lib/types/shipping'
 
-export default function CheckoutOrderSummary() {
+interface Props {
+  selectedCourier?: ShippingCourier | null
+  shippingLoading?: boolean
+}
+
+export default function CheckoutOrderSummary({ selectedCourier, shippingLoading }: Props) {
   const { items, subtotalPaise, totalItems } = useCart()
+
+  const shippingPaise = selectedCourier?.rate_paise ?? 0
+  const totalPaise    = subtotalPaise + shippingPaise
 
   return (
     <div className="bg-ivory-200/60 border border-obsidian/8 p-7 flex flex-col gap-5 sticky top-24">
@@ -63,28 +72,54 @@ export default function CheckoutOrderSummary() {
             {formatPrice(subtotalPaise)}
           </span>
         </div>
-        <div className="flex justify-between">
+
+        {/* Shipping row — dynamic */}
+        <div className="flex justify-between items-center">
           <span className="font-body text-[11px] uppercase tracking-[0.15em] text-pewter">
             Shipping
           </span>
-          <span className="font-body text-[11px] text-pewter italic">TBD</span>
+          {shippingLoading ? (
+            <span className="h-3 w-16 bg-obsidian/8 rounded animate-pulse" />
+          ) : selectedCourier ? (
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="font-body text-sm text-obsidian tabular-nums">
+                {formatPrice(selectedCourier.rate_paise)}
+              </span>
+              <span className="font-body text-[10px] text-pewter/70">
+                {selectedCourier.courier_name}
+              </span>
+            </div>
+          ) : (
+            <span className="font-body text-[11px] text-pewter italic">Enter pincode</span>
+          )}
         </div>
       </div>
 
       <div className="h-[1px] bg-obsidian/8" />
 
-      <div className="flex justify-between">
+      {/* Grand total */}
+      <div className="flex justify-between items-center">
         <span className="font-body text-[12px] uppercase tracking-[0.2em] text-obsidian">
           Total
         </span>
-        <span className="font-display text-[22px] text-obsidian tabular-nums">
-          {formatPrice(subtotalPaise)}
-        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="font-display text-[22px] text-obsidian tabular-nums">
+            {formatPrice(totalPaise)}
+          </span>
+          {selectedCourier && (
+            <span className="font-body text-[10px] text-pewter/60">
+              incl. shipping
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Delivery note */}
       <p className="font-body text-[11px] text-pewter border-t border-obsidian/8 pt-4">
-        Handcrafted to order — your pieces will be delivered within 7–14 working days.
+        {selectedCourier
+          ? `Delivery via ${selectedCourier.courier_name} — estimated ${selectedCourier.estimated_delivery_days} working days.`
+          : 'Handcrafted to order — your pieces will be delivered within 7–14 working days.'
+        }
       </p>
     </div>
   )

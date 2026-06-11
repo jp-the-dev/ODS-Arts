@@ -95,6 +95,9 @@ export interface PlaceOrderRequest {
     unitPricePaise: number
   }>
   subtotalPaise: number
+  shippingCostPaise?: number
+  courierId?: number
+  courierName?: string
   currency: 'INR'
   notes?: string
 }

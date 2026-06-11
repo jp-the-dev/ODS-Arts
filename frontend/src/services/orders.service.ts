@@ -47,7 +47,10 @@ export function buildOrderRequest(
     notes: string
   },
   items: CartItem[],
-  subtotalPaise: number
+  subtotalPaise: number,
+  shippingCostPaise: number = 0,
+  courierId?: number | null,
+  courierName?: string | null,
 ): PlaceOrderRequest {
   return {
     customer: {
@@ -84,6 +87,9 @@ export function buildOrderRequest(
       }
     }),
     subtotalPaise,
+    shippingCostPaise,
+    courierId:   courierId   ?? undefined,
+    courierName: courierName ?? undefined,
     currency: 'INR',
     notes: form.notes || undefined,
   }

@@ -14,6 +14,7 @@ import { getWishlist } from '@/lib/services/wishlist'
 import type { UpdateProfileInput, UpdatePasswordInput } from '@/lib/services/auth'
 import type { Address } from '@/lib/services/addresses'
 import type { Order } from '@/lib/services/orders'
+import TrackingDrawer from '@/components/account/TrackingDrawer'
 import type { WishlistItem } from '@/lib/services/wishlist'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -223,9 +224,10 @@ function PasswordSection() {
 // ── Orders Section ────────────────────────────────────────────────────────────
 
 function OrdersSection() {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [orders, setOrders]     = useState<Order[]>([])
+  const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [trackingOrder, setTrackingOrder] = useState<string | null>(null)
 
   useEffect(() => {
     getOrders().then(d => setOrders(d ?? [])).catch(() => {}).finally(() => setLoading(false))
@@ -233,6 +235,12 @@ function OrdersSection() {
 
   return (
     <Section title="My Orders" subtitle="Purchase history">
+      {/* Tracking drawer — rendered at section root so it overlays page */}
+      <TrackingDrawer
+        orderNumber={trackingOrder}
+        onClose={() => setTrackingOrder(null)}
+      />
+
       {loading ? (
         <div className="flex items-center gap-3 py-8 text-obsidian/40">
           <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -297,6 +305,46 @@ function OrdersSection() {
                         <span>Total</span>
                         <span>{formatRupees(order.total)}</span>
                       </div>
+
+                      {/* Shipping info row */}
+                      {(order.courier_name || order.awb_code) && (
+                        <div className="pt-2 border-t border-obsidian/8 flex flex-wrap items-center gap-3">
+                          {order.courier_name && (
+                            <span className="font-body text-[11px] text-obsidian/50">
+                              via {order.courier_name}
+                            </span>
+                          )}
+                          {order.awb_code && (
+                            <span className="font-body text-[11px] text-obsidian/40 font-mono">
+                              AWB: {order.awb_code}
+                            </span>
+                          )}
+                          {order.estimated_delivery_date && (
+                            <span className="font-body text-[11px] text-gold">
+                              ETA: {order.estimated_delivery_date}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Track Shipment button */}
+                      {['confirmed', 'processing', 'shipped', 'delivered'].includes(order.status) && (
+                        <div className="pt-2">
+                          <button
+                            onClick={() => setTrackingOrder(order.order_number)}
+                            className="flex items-center gap-2 font-body text-[11px] uppercase tracking-[0.2em] text-gold hover:text-walnut transition-colors duration-200 group"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Track Shipment
+                            <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="opacity-50 group-hover:translate-x-0.5 transition-transform duration-200">
+                              <path d="M1 7h12M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}

@@ -30,6 +30,11 @@ export interface Order {
   ordered_at: string
   items: OrderItem[]
   created_at: string
+  // Shiprocket shipping fields
+  awb_code: string | null
+  courier_name: string | null
+  shiprocket_status: string | null
+  estimated_delivery_date: string | null
 }
 
 export async function getOrders(): Promise<Order[]> {
