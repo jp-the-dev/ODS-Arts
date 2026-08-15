@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/lib/store/cart'
 import { placeOrder, buildOrderRequest } from '@/services/orders.service'
 import { payForOrder, type PaymentOutcome } from '@/services/payment.service'
+import SavedAddressPicker, { type AddressFill } from '@/components/checkout/SavedAddressPicker'
+import { apiFetch } from '@/lib/api/client'
+import { authHeaders, useAuth } from '@/lib/store/auth'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -109,6 +112,31 @@ export default function CheckoutForm() {
   const [orderRef, setOrderRef] = useState<string | null>(null)
   const [payment, setPayment] = useState<PaymentOutcome | null>(null)
 
+  const { isAuthenticated } = useAuth()
+  const [saveAddress, setSaveAddress] = useState(false)
+  // Tracks whether the form was filled from a saved address, so we don't offer
+  // to save something the customer already has.
+  const [usedSavedAddress, setUsedSavedAddress] = useState(false)
+
+  const applySavedAddress = useCallback((fill: AddressFill) => {
+    setForm((prev) => ({ ...prev, ...fill }))
+    setUsedSavedAddress(true)
+    setErrors({})
+  }, [])
+
+  const applyIdentity = useCallback(
+    (identity: { fullName: string; email: string; phone: string }) => {
+      // Only fill blanks — never overwrite what the customer has typed.
+      setForm((prev) => ({
+        ...prev,
+        fullName: prev.fullName || identity.fullName,
+        email: prev.email || identity.email,
+        phone: prev.phone || identity.phone,
+      }))
+    },
+    []
+  )
+
   // Clear cart and show success when orderRef is set
   useEffect(() => {
     if (orderRef) clearCart()
@@ -141,6 +169,31 @@ export default function CheckoutForm() {
       const response = await placeOrder(
         buildOrderRequest(form, items, subtotalPaise)
       )
+
+      // Save before payment: the order exists either way, and an abandoned
+      // payment shouldn't cost the customer the address they just typed.
+      if (isAuthenticated && saveAddress && !usedSavedAddress) {
+        try {
+          await apiFetch('/auth/addresses', {
+            method: 'POST',
+            headers: authHeaders(),
+            revalidate: false,
+            body: JSON.stringify({
+              label: 'Delivery address',
+              full_name: form.fullName,
+              phone: form.phone,
+              address_line1: form.addressLine1,
+              address_line2: form.addressLine2 || null,
+              city: form.city,
+              state: form.state,
+              postal_code: form.pincode,
+              country: 'IN',
+            }),
+          })
+        } catch {
+          // Never let a failed save block the purchase.
+        }
+      }
 
       const outcome = await payForOrder(response.orderReference, {
         fullName: form.fullName,
@@ -373,6 +426,8 @@ export default function CheckoutForm() {
           <div className="h-[1px] w-10 bg-gold/50 mt-3" />
         </div>
 
+        <SavedAddressPicker onSelect={applySavedAddress} onIdentify={applyIdentity} />
+
         <Field label="Address Line 1" id="addressLine1" error={errors.addressLine1}>
           <input
             id="addressLine1"
@@ -445,6 +500,21 @@ export default function CheckoutForm() {
             />
           </Field>
         </div>
+
+        {/* Offered only when there is something new to save. */}
+        {isAuthenticated && !usedSavedAddress && (
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={saveAddress}
+              onChange={(e) => setSaveAddress(e.target.checked)}
+              className="mt-0.5 accent-[#C9A96E] w-4 h-4"
+            />
+            <span className="font-body text-[13px] leading-[1.6] text-pewter-dark">
+              Save this address to my account for next time
+            </span>
+          </label>
+        )}
       </section>
 
       {/* ── Section 3: Order Confirmation ── */}
