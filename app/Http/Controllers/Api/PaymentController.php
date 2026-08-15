@@ -158,6 +158,69 @@ class PaymentController extends Controller
      * browser may close before /verify runs — so it marks orders paid on its own.
      * Verified against the raw request body with the webhook secret.
      */
+    /**
+     * Record a payment the customer's browser saw fail.
+     *
+     * Razorpay reports a declined card or a failed UPI collect to the browser
+     * only. Without this the order sat at payment_status "pending" — identical
+     * to one the customer simply abandoned — so nothing downstream, in the admin
+     * or on the tracking page, could tell that a payment had actually been tried
+     * and refused.
+     *
+     * The razorpay_order_id is what authorises the change: it is issued by
+     * Razorpay when payment starts and is not guessable from the order
+     * reference, so a stranger holding only the reference cannot mark someone
+     * else's order failed.
+     */
+    public function failed(Request $request, string $orderNumber): JsonResponse
+    {
+        $validated = $request->validate([
+            'razorpay_order_id' => ['required', 'string', 'max:255'],
+            'reason' => ['sometimes', 'nullable', 'string', 'max:500'],
+        ]);
+
+        $order = $this->findPayableOrder($request, $orderNumber);
+
+        if (! $order) {
+            return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        if (blank($order->razorpay_order_id)
+            || ! hash_equals($order->razorpay_order_id, $validated['razorpay_order_id'])) {
+            return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        // A captured payment is the authority. The browser can report a failure
+        // after the webhook has already confirmed the money arrived — on a retry
+        // within the same widget, for instance — and that must not undo it.
+        if ($order->payment_status === 'paid') {
+            return response()->json([
+                'data' => [
+                    'orderReference' => $order->order_number,
+                    'paymentStatus' => $order->payment_status,
+                    'status' => $order->status,
+                ],
+                'message' => 'Payment already confirmed.',
+            ]);
+        }
+
+        Log::info('Payment reported failed by the client', [
+            'order' => $order->order_number,
+            'reason' => $validated['reason'] ?? null,
+        ]);
+
+        $order->update(['payment_status' => 'failed']);
+
+        return response()->json([
+            'data' => [
+                'orderReference' => $order->order_number,
+                'paymentStatus' => $order->payment_status,
+                'status' => $order->status,
+            ],
+            'message' => 'Payment failure recorded.',
+        ]);
+    }
+
     public function webhook(Request $request): JsonResponse
     {
         $secret = (string) config('services.razorpay.webhook_secret');

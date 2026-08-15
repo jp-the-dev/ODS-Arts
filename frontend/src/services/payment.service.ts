@@ -34,8 +34,14 @@ export type PaymentOutcome =
   | { status: 'paid' }
   /** Payments are not configured on the server (missing keys). */
   | { status: 'unavailable' }
-  /** Customer closed the widget, or the attempt failed. Order still stands. */
+  /** Customer closed the widget without paying. Order stands, unpaid. */
   | { status: 'pending'; reason: string }
+  /**
+   * The payment was attempted and refused — a declined card, a failed UPI
+   * collect. Distinct from `pending` because the customer must be told their
+   * money was not taken rather than shown a confirmation.
+   */
+  | { status: 'failed'; reason: string }
 
 // ── Razorpay global ───────────────────────────────────────────────────────────
 
@@ -122,6 +128,30 @@ export async function verifyPayment(
   })
 }
 
+/**
+ * Tell the server the browser saw the payment fail.
+ *
+ * Razorpay reports a decline to the browser only, so without this the order is
+ * indistinguishable from one the customer abandoned. Never throws: the report
+ * is best-effort, and failing to record it must not turn a declined payment
+ * into an error screen on top of everything else.
+ */
+export async function reportPaymentFailed(
+  orderReference: string,
+  razorpayOrderId: string,
+  reason?: string
+): Promise<void> {
+  try {
+    await apiFetch(`/orders/${encodeURIComponent(orderReference)}/payment-failed`, {
+      method: 'POST',
+      body: JSON.stringify({ razorpay_order_id: razorpayOrderId, reason }),
+      revalidate: false,
+    })
+  } catch {
+    // The webhook is the backstop — Razorpay also reports payment.failed to us.
+  }
+}
+
 // ── Orchestration ─────────────────────────────────────────────────────────────
 
 /**
@@ -182,9 +212,15 @@ export async function payForOrder(
       },
     })
 
-    razorpay.on('payment.failed', () =>
-      resolve({ status: 'pending', reason: 'The payment did not go through.' })
-    )
+    razorpay.on('payment.failed', (event) => {
+      const reason =
+        (event as { error?: { description?: string } })?.error?.description ??
+        'The payment did not go through.'
+
+      reportPaymentFailed(orderReference, session.razorpayOrderId, reason).finally(() =>
+        resolve({ status: 'failed', reason })
+      )
+    })
 
     razorpay.open()
   })

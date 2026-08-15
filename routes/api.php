@@ -80,6 +80,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
     // requires a Razorpay signature that cannot be forged.
     Route::post('/orders/{orderNumber}/pay', [PaymentController::class, 'pay'])->middleware('throttle:payments')->name('orders.pay');
     Route::post('/orders/{orderNumber}/verify', [PaymentController::class, 'verify'])->middleware('throttle:payments')->name('orders.verify');
+    Route::post('/orders/{orderNumber}/payment-failed', [PaymentController::class, 'failed'])->middleware('throttle:payments')->name('orders.payment-failed');
 
     // Order tracking — reference acts as the capability for guest orders
     Route::get('/orders/{orderNumber}/tracking', [TrackingController::class, 'show'])->name('orders.tracking');

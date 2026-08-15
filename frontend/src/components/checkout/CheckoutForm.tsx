@@ -218,20 +218,30 @@ export default function CheckoutForm() {
     // The screen must not claim payment was taken when it wasn't — an abandoned
     // or unconfigured payment still leaves a valid, recoverable order.
     const paid = payment?.status === 'paid'
-    const eyebrow = paid ? 'Payment Received' : 'Order Placed'
+    // A refused payment must not be dressed as a confirmation. The order is
+    // still saved and recoverable, but the customer's money was not taken and
+    // the screen has to say so plainly.
+    const failed = payment?.status === 'failed'
+    const eyebrow = paid ? 'Payment Received' : failed ? 'Payment Failed' : 'Order Placed'
     const heading = paid
       ? 'Your order is confirmed.'
-      : 'Your order has been placed.'
+      : failed
+        ? 'Your payment did not go through.'
+        : 'Your order has been placed.'
     const message = paid
       ? 'A confirmation has been sent to'
-      : payment?.status === 'pending'
-        ? `${payment.reason} We'll email`
-        : "We'll reach out to"
+      : failed
+        ? `${payment.reason} Nothing has been charged. We have saved your order against`
+        : payment?.status === 'pending'
+          ? `${payment.reason} We'll email`
+          : "We'll reach out to"
     const messageTail = paid
       ? '. We\u2019ll be in touch when it ships.'
-      : payment?.status === 'pending'
-        ? ' with a link to complete your payment.'
-        : ' within 24 hours to confirm your order details and share a payment link.'
+      : failed
+        ? ' so you can try again.'
+        : payment?.status === 'pending'
+          ? ' with a link to complete your payment.'
+          : ' within 24 hours to confirm your order details and share a payment link.'
 
     return (
       <motion.div
@@ -254,7 +264,7 @@ export default function CheckoutForm() {
               cx="40"
               cy="40"
               r="36"
-              stroke="#C9A96E"
+              stroke={failed ? '#B4413C' : '#C9A96E'}
               strokeWidth="1.5"
               strokeLinecap="round"
               initial={{ pathLength: 0 }}
@@ -271,8 +281,8 @@ export default function CheckoutForm() {
             transition={{ duration: 0.4, delay: 0.7, ease: [0.25, 0, 0, 1] }}
           >
             <path
-              d="M4 12l5 5 11-11"
-              stroke="#C9A96E"
+              d={failed ? 'M6 6l12 12M18 6L6 18' : 'M4 12l5 5 11-11'}
+              stroke={failed ? '#B4413C' : '#C9A96E'}
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -281,7 +291,7 @@ export default function CheckoutForm() {
         </div>
 
         {/* Order confirmed */}
-        <p className="font-body text-[10px] uppercase tracking-[0.35em] text-gold mb-3">
+        <p className={`font-body text-[10px] uppercase tracking-[0.35em] mb-3 ${failed ? 'text-[#B4413C]' : 'text-gold'}`}>
           {eyebrow}
         </p>
         <h1 className="font-display text-[clamp(32px,4vw,52px)] text-obsidian leading-tight mb-4">
@@ -304,8 +314,8 @@ export default function CheckoutForm() {
           {messageTail}
         </p>
 
-        {/* Delivery info */}
-        <div className="flex flex-col gap-2 mb-10">
+        {/* Delivery info — meaningless until the order is actually paid for. */}
+        <div className={`flex-col gap-2 mb-10 ${failed ? 'hidden' : 'flex'}`}>
           {[
             'Handcrafted in our studio with museum-grade materials',
             'Estimated delivery: 7–14 working days after confirmation',

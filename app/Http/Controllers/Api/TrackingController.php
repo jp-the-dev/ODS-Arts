@@ -41,6 +41,10 @@ class TrackingController extends Controller
                 'data' => [
                     'orderReference' => $order->order_number,
                     'status' => $order->status,
+                    // Without this the page cannot distinguish an order awaiting
+                    // payment from one whose payment was refused — both read as
+                    // status "pending" and look successfully placed.
+                    'paymentStatus' => $order->payment_status,
                     'awbCode' => null,
                     'courierName' => $order->courier_name,
                     'currentStatus' => 'Not yet shipped',
@@ -69,6 +73,7 @@ class TrackingController extends Controller
             'data' => [
                 'orderReference' => $order->order_number,
                 'status' => $order->status,
+                'paymentStatus' => $order->payment_status,
                 'awbCode' => $order->awb_code,
                 'courierName' => $order->courier_name,
                 'currentStatus' => $tracking['current_status'] ?? 'Unknown',

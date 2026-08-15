@@ -18,6 +18,11 @@
         </include>
     </source>
     <php>
+        <!-- Rendering Filament pages and Livewire components in tests exceeds
+             PHP's 128M default, which fails as an out-of-memory fatal that hides
+             whatever the real failure was. Declared here so the suite does not
+             depend on a machine's php.ini. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
