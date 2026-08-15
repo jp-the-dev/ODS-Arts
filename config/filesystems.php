@@ -41,7 +41,17 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Relative on purpose. An absolute URL built from APP_URL is a
+            // different origin whenever the host in the browser's URL bar
+            // differs from it — localhost vs 127.0.0.1 are distinct origins to
+            // a browser — and the admin's uploader fetches these images with
+            // JavaScript, so it fails with an opaque "Failed to fetch". Static
+            // files under /storage bypass Laravel entirely, so no CORS header
+            // can be added to rescue it. A relative URL is always same-origin.
+            //
+            // The storefront API is unaffected: it builds absolute URLs through
+            // asset() in the image models, not from this value.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

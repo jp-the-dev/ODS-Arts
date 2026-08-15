@@ -113,9 +113,9 @@ class CollectionSeeder extends Seeder
 
     /** @var list<array{path: string, alt: string, sort: int}> */
     private static array $lifestyleImages = [
-        ['path' => '/images/lifestyle/1.png', 'alt' => 'Frame in a modern living room', 'sort' => 2],
-        ['path' => '/images/lifestyle/2.png', 'alt' => 'Frame displayed on a gallery wall', 'sort' => 3],
-        ['path' => '/images/lifestyle/3.png', 'alt' => 'Frame in natural light', 'sort' => 4],
+        ['path' => '/images/lifestyle/ahmedabad.png', 'alt' => 'Frame in a modern living room', 'sort' => 2],
+        ['path' => '/images/lifestyle/mumbai.png', 'alt' => 'Frame displayed on a gallery wall', 'sort' => 3],
+        ['path' => '/images/lifestyle/surat.png', 'alt' => 'Frame in natural light', 'sort' => 4],
     ];
 
     public function run(): void
