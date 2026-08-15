@@ -38,6 +38,21 @@ class PaymentController extends Controller
             return response()->json(['message' => 'This order has already been paid.'], 409);
         }
 
+        // A retry after the release job has run would be paying for units that
+        // are back on the shelf and may since have been sold to somebody else.
+        if ($order->stock_released_at !== null || $order->status === 'cancelled') {
+            return response()->json([
+                'message' => 'This order was cancelled because payment was not completed in time. Please place a new order.',
+            ], 409);
+        }
+
+        // A previous attempt was refused. Starting another one puts the order
+        // back to "awaiting payment" so it does not read as failed while the
+        // customer is mid-retry.
+        if ($order->payment_status === 'failed') {
+            $order->update(['payment_status' => 'pending']);
+        }
+
         if (blank(config('services.razorpay.key')) || blank(config('services.razorpay.secret'))) {
             return response()->json([
                 'message' => 'Payments are not configured. Set RAZORPAY_KEY and RAZORPAY_SECRET.',

@@ -62,6 +62,7 @@ interface RazorpayOptions {
 interface RazorpayInstance {
   open: () => void
   on: (event: string, handler: (response: unknown) => void) => void
+  close: () => void
 }
 
 declare global {
@@ -165,7 +166,7 @@ export async function reportPaymentFailed(
  */
 export async function payForOrder(
   orderReference: string,
-  customer: { fullName: string; email: string; phone: string }
+  customer?: { fullName: string; email: string; phone: string }
 ): Promise<PaymentOutcome> {
   let session: StartPaymentResponse | null
 
@@ -191,10 +192,12 @@ export async function payForOrder(
       order_id: session.razorpayOrderId,
       name: 'ODSArts',
       description: `Order ${orderReference}`,
+      // Prefill is a convenience, not a requirement — retrying from the order
+      // page has no form to read from, and Razorpay simply asks for the details.
       prefill: {
-        name: customer.fullName,
-        email: customer.email,
-        contact: customer.phone,
+        name: customer?.fullName ?? '',
+        email: customer?.email ?? '',
+        contact: customer?.phone ?? '',
       },
       theme: { color: '#C9A96E' },
       handler: (response) => {
@@ -220,9 +223,22 @@ export async function payForOrder(
         (event as { error?: { description?: string } })?.error?.description ??
         'The payment did not go through.'
 
-      reportPaymentFailed(orderReference, session.razorpayOrderId, reason).finally(() =>
-        resolve({ status: 'failed', reason })
-      )
+      // Resolve before closing. close() fires modal.ondismiss, which resolves
+      // with 'pending' — harmless once settled, but it would win the race if we
+      // waited for the report first, and a declined card would be reported to
+      // the customer as an abandoned one.
+      resolve({ status: 'failed', reason })
+
+      // Razorpay leaves its window open on a failed payment, so the customer is
+      // left staring at a dead form with no obvious way out until they find the
+      // close button themselves.
+      void reportPaymentFailed(orderReference, session.razorpayOrderId, reason)
+
+      try {
+        razorpay.close()
+      } catch {
+        // Older widget builds have no close(); the customer can still dismiss it.
+      }
     })
 
     razorpay.open()

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { apiFetch, ApiError } from '@/lib/api/client'
 import { authHeaders } from '@/lib/store/auth'
+import { payForOrder } from '@/services/payment.service'
 
 interface Checkpoint {
   date?: string
@@ -15,6 +16,9 @@ interface Checkpoint {
 interface Tracking {
   orderReference: string
   status: string
+  /** 'pending' | 'failed' | 'paid' — the only thing that distinguishes an order
+   *  waiting to be paid from one whose payment was refused. */
+  paymentStatus?: string
   awbCode: string | null
   courierName: string | null
   currentStatus: string
@@ -41,6 +45,8 @@ export default function OrderTracking({ orderNumber }: { orderNumber: string }) 
   const [tracking, setTracking] = useState<Tracking | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [paying, setPaying] = useState(false)
+  const [payNote, setPayNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -72,6 +78,41 @@ export default function OrderTracking({ orderNumber }: { orderNumber: string }) 
     }
   }, [load])
 
+  /**
+   * Pay for an order that was placed but never paid for.
+   *
+   * The order already has a Razorpay order id, so this reopens the same payment
+   * rather than creating a second order for the same items.
+   */
+  async function handlePayNow() {
+    if (!tracking || paying) return
+
+    setPaying(true)
+    setPayNote(null)
+
+    try {
+      const outcome = await payForOrder(tracking.orderReference)
+
+      if (outcome.status === 'paid') {
+        await load()
+        setPayNote('Payment received. Thank you.')
+
+        return
+      }
+
+      setPayNote(
+        outcome.status === 'unavailable'
+          ? 'Payments are unavailable right now. Please try again shortly.'
+          : outcome.reason
+      )
+
+      // The server records a refusal, so re-read rather than guessing the state.
+      await load()
+    } finally {
+      setPaying(false)
+    }
+  }
+
   if (loading) {
     return <p className="font-body text-[13px] text-pewter py-16 text-center">Loading your order…</p>
   }
@@ -92,9 +133,42 @@ export default function OrderTracking({ orderNumber }: { orderNumber: string }) 
 
   const current = stageIndex(tracking.status)
   const isCancelled = ['cancelled', 'returned'].includes(tracking.status.toLowerCase())
+  const payment = (tracking.paymentStatus ?? '').toLowerCase()
+  // An order can sit here unpaid: checkout creates it before payment, so an
+  // abandoned or refused attempt leaves a real order with no money against it.
+  const awaitingPayment = !isCancelled && (payment === 'pending' || payment === 'failed')
 
   return (
     <div className="flex flex-col gap-12">
+      {/* Unpaid — the one state the customer can act on from this page. */}
+      {awaitingPayment && (
+        <div className="border border-gold/40 bg-gold/5 px-6 py-6 sm:px-8">
+          <p className="font-body text-[10px] uppercase tracking-[0.25em] text-gold mb-2">
+            {payment === 'failed' ? 'Payment Failed' : 'Payment Pending'}
+          </p>
+          <p className="font-body text-[14px] leading-[1.8] text-pewter-dark mb-5">
+            {payment === 'failed'
+              ? 'Your last payment attempt did not go through, and nothing has been charged. Your order is held — you can try again below.'
+              : 'This order has not been paid for yet. Complete payment to send it into the studio queue.'}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={handlePayNow}
+              disabled={paying}
+              className="inline-flex items-center gap-3 bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-walnut transition-colors duration-500 disabled:opacity-50"
+            >
+              {paying ? 'Opening…' : payment === 'failed' ? 'Try Payment Again' : 'Complete Payment'}
+            </button>
+
+            {payNote && (
+              <p className="font-body text-[13px] text-pewter-dark">{payNote}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <div className="border border-obsidian/10 px-6 py-6 sm:px-8">
         <div className="flex flex-wrap items-start justify-between gap-6">

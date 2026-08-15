@@ -111,6 +111,40 @@ describe('POST /orders/{orderNumber}/pay', function (): void {
         $this->postJson('/api/v1/orders/ODS-ANON/pay')->assertUnauthorized();
     });
 
+    it('lets a customer retry after a refused payment', function (): void {
+        // The Razorpay order is reused, so retrying does not create a second
+        // order for the same basket.
+        Http::fake();
+
+        Order::factory()->for($this->payer)->create([
+            'order_number' => 'ODS-RETRY', 'razorpay_order_id' => 'order_FIRST',
+            'payment_status' => 'failed', 'status' => 'pending',
+        ]);
+
+        $this->postJson('/api/v1/orders/ODS-RETRY/pay')
+            ->assertOk()
+            ->assertJsonPath('data.razorpayOrderId', 'order_FIRST');
+
+        // And it no longer reads as failed while the retry is in progress.
+        expect(Order::where('order_number', 'ODS-RETRY')->first()->payment_status)
+            ->toBe('pending');
+    });
+
+    it('refuses a retry once the order was cancelled and its stock returned', function (): void {
+        // Those units are back on the shelf and may since have been sold.
+        Http::fake();
+
+        Order::factory()->for($this->payer)->create([
+            'order_number' => 'ODS-GONE', 'razorpay_order_id' => 'order_OLD',
+            'payment_status' => 'failed', 'status' => 'cancelled',
+            'stock_released_at' => now()->subHour(),
+        ]);
+
+        $this->postJson('/api/v1/orders/ODS-GONE/pay')
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'This order was cancelled because payment was not completed in time. Please place a new order.');
+    });
+
     it('does not let one customer pay another customer order', function (): void {
         Http::fake();
         $owner = User::factory()->create();

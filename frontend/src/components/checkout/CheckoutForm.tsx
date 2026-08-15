@@ -212,6 +212,30 @@ export default function CheckoutForm() {
     }
   }
 
+  /**
+   * Try paying again for the order that was already placed.
+   *
+   * The order and its Razorpay order id both still exist, so this reopens the
+   * same payment rather than creating a second order for the same basket.
+   */
+  async function handleRetryPayment() {
+    if (!orderRef || isSubmitting) return
+
+    setIsSubmitting(true)
+
+    try {
+      setPayment(
+        await payForOrder(orderRef, {
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+        })
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // ── Sign-in wall ────────────────────────────────────────────────────────────
 
   // Checkout requires an account. The API enforces this too — POST /orders is
@@ -373,6 +397,19 @@ export default function CheckoutForm() {
           >
             Track this order
           </Link>
+
+          {/* A refused payment is usually a card or a bank, not a decision —
+              the way out should be trying again, not browsing on. */}
+          {!paid && (
+            <button
+              type="button"
+              onClick={handleRetryPayment}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-3 bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-walnut transition-colors duration-500 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Opening…' : 'Try Payment Again'}
+            </button>
+          )}
 
           <Link
             href="/collections"
