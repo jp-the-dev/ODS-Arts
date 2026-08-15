@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\ImageUrl;
+use App\Services\StoredImage;
 use Database\Factories\ProductImageFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +25,17 @@ class ProductImage extends Model
         'sort_order' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        static::updated(function (self $image): void {
+            if ($image->wasChanged('path')) {
+                StoredImage::forget($image->getOriginal('path'), self::class);
+            }
+        });
+
+        static::deleted(fn (self $image) => StoredImage::forget($image->path, self::class));
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -38,11 +51,7 @@ class ProductImage extends Model
      */
     public function getUrlAttribute(): string
     {
-        if (str_starts_with($this->path, '/')) {
-            return $this->path;
-        }
-
-        return asset('storage/'.$this->path);
+        return (string) ImageUrl::for($this->path);
     }
 
     /**
@@ -54,10 +63,6 @@ class ProductImage extends Model
      */
     public function getAdminUrlAttribute(): string
     {
-        if (str_starts_with($this->path, '/')) {
-            return rtrim((string) config('app.frontend_url'), '/').$this->path;
-        }
-
-        return asset('storage/'.$this->path);
+        return (string) ImageUrl::forAdmin($this->path);
     }
 }

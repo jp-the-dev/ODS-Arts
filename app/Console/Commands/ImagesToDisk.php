@@ -53,9 +53,10 @@ class ImagesToDisk extends Command
         $missing = [];
 
         // The seeder reuses the same workshop and lifestyle shots across several
-        // products, but each row still gets its own copy. Filament deletes the
-        // file behind a removed upload, so a shared one would mean clearing the
-        // image on one product silently breaks it on every other.
+        // products, but each row still gets its own copy so that replacing or
+        // deleting one product's image cannot affect another's. StoredImage also
+        // refuses to delete a path another row still references, so the two
+        // guards overlap deliberately.
         foreach ($pending as $image) {
             $source = $sourceRoot.$image->path;
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ImageUrl;
 use Database\Factories\ArtImageFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,10 +35,6 @@ class ArtImage extends Model
 
     public function getUrlAttribute(): string
     {
-        if (str_starts_with($this->path, '/')) {
-            return $this->path;
-        }
-
-        return asset('storage/'.$this->path);
+        return (string) ImageUrl::for($this->path);
     }
 }

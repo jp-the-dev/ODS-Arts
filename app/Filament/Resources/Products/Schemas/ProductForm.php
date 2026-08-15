@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Products\Schemas;
 
 use App\Models\Collection;
+use App\Models\ProductImage;
+use App\Services\StoredImage;
+use App\Services\UploadLimits;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -126,8 +129,14 @@ class ProductForm
                                     ->imageResizeTargetWidth('1600')
                                     ->imageResizeTargetHeight('2000')
                                     ->imageResizeUpscale(false)
-                                    ->maxSize(5120)
-                                    ->helperText('Any size — large images are scaled to fit 1600×2000 automatically.')
+                                    // PHP rejects an oversized upload before
+                                    // Laravel sees it, with no usable message, so
+                                    // the limit tracks what the server accepts.
+                                    ->maxSize(UploadLimits::maxKilobytes())
+                                    ->deleteUploadedFileUsing(
+                                        fn (?string $file) => StoredImage::forget($file, ProductImage::class)
+                                    )
+                                    ->helperText('Any size — large images are scaled to fit 1600×2000 automatically. Uploads over '.UploadLimits::describe().' are rejected by the server.')
                                     ->required(),
 
                                 TextInput::make('alt')

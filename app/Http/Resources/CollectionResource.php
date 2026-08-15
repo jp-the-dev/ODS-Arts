@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Collection;
+use App\Services\ImageUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,9 +28,7 @@ class CollectionResource extends JsonResource
             'image_src' => $this->resource->image_path,
             'image_alt' => $this->resource->image_alt,
             'image_position' => $this->resource->image_position ?? 'left',
-            'cover_image' => $this->resource->cover_image
-                ? asset('storage/'.$this->resource->cover_image)
-                : null,
+            'cover_image' => ImageUrl::for($this->resource->cover_image),
             'finish_options' => FinishOptionResource::collection($this->whenLoaded('finishOptions', fn () => $this->resource->finishOptions)),
             'products_count' => $this->whenLoaded('products', fn () => $this->resource->products->count()),
             'products' => $this->whenLoaded('products', fn () => ProductResource::collection($this->resource->products)),

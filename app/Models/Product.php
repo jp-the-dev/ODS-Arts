@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StoredImage;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -45,6 +46,22 @@ class Product extends Model
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
+    }
+
+    protected static function booted(): void
+    {
+        // product_images cascades at the database level, so deleting a product
+        // never fires the image models' own events — their files have to be
+        // collected here or they are orphaned silently.
+        static::deleting(function (self $product): void {
+            $paths = $product->images()->pluck('path');
+
+            $product->images()->delete();
+
+            foreach ($paths as $path) {
+                StoredImage::forget($path, ProductImage::class);
+            }
+        });
     }
 
     public function images(): HasMany

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\ArtCategory;
+use App\Services\ImageUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,7 +22,7 @@ class ArtCategoryResource extends JsonResource
             'title' => $this->resource->title,
             'tagline' => $this->resource->tagline,
             'description' => $this->resource->description,
-            'cover_image' => $this->resource->cover_image,
+            'cover_image' => ImageUrl::for($this->resource->cover_image),
             'cover_image_alt' => $this->resource->cover_image_alt,
             'accent_color' => $this->resource->accent_color,
             'art_count' => $this->whenCounted('artProducts'),

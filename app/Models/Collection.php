@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StoredImage;
 use Database\Factories\CollectionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,6 +38,17 @@ class Collection extends Model
         'materials' => 'array',
         'features' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::updated(function (self $collection): void {
+            if ($collection->wasChanged('cover_image')) {
+                StoredImage::forget($collection->getOriginal('cover_image'), self::class, 'cover_image');
+            }
+        });
+
+        static::deleted(fn (self $collection) => StoredImage::forget($collection->cover_image, self::class, 'cover_image'));
+    }
 
     public function products(): HasMany
     {

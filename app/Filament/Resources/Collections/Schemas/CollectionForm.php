@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Collections\Schemas;
 
+use App\Models\Collection;
+use App\Services\StoredImage;
+use App\Services\UploadLimits;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
@@ -106,8 +109,11 @@ class CollectionForm
                             ->imageResizeTargetWidth('1920')
                             ->imageResizeTargetHeight('1080')
                             ->imageResizeUpscale(false)
-                            ->maxSize(5120)
-                            ->helperText('Any size — large images are scaled to fit 1920×1080 automatically.'),
+                            ->maxSize(UploadLimits::maxKilobytes())
+                            ->deleteUploadedFileUsing(
+                                fn (?string $file) => StoredImage::forget($file, Collection::class, 'cover_image')
+                            )
+                            ->helperText('Any size — large images are scaled to fit 1920×1080 automatically. Uploads over '.UploadLimits::describe().' are rejected by the server.'),
                     ]),
 
                 Section::make('Visibility & Ordering')

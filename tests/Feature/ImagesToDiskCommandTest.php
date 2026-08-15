@@ -40,8 +40,7 @@ describe('odsarts:images-to-disk', function (): void {
     });
 
     it('gives each row its own copy of a shared source', function (): void {
-        // Filament deletes the file behind a removed upload, so sharing one file
-        // would let clearing one product's image break another's.
+        // Replacing or deleting one product's image must not affect another's.
         $images = ProductImage::factory()->count(2)->for(Product::factory())->create([
             'path' => '/images/testing/shared.png',
         ]);
