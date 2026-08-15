@@ -10,7 +10,10 @@
 import { apiFetch } from '@/lib/api/client'
 import type { CustomFramingQuoteRequest, CustomFramingQuoteResponse } from '@/types'
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA !== 'false'
+// `POST /custom-framing/quotes` is not implemented on the Laravel side yet, so
+// quote requests stay mocked even when NEXT_PUBLIC_USE_MOCK_DATA=false takes the
+// rest of the app live. Flip NEXT_PUBLIC_FRAMING_API_READY=true once it ships.
+const USE_MOCK = process.env.NEXT_PUBLIC_FRAMING_API_READY !== 'true'
 
 function generateQuoteRef(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

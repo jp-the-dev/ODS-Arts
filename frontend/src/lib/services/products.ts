@@ -27,7 +27,24 @@ interface ApiCollectionSummary {
   name: string
 }
 
-interface ApiProduct {
+interface ApiProductVariant {
+  id: string
+  sku: string
+  size_label: string
+  dimensions_cm: string | null
+  base_price_paise: number
+  stock_qty: number
+  weight_grams: number
+}
+
+interface ApiFinishOption {
+  id: string
+  name: string
+  swatch_hex: string | null
+  price_delta_paise: number
+}
+
+export interface ApiProduct {
   id: number
   slug: string
   name: string
@@ -42,6 +59,8 @@ interface ApiProduct {
   is_featured: boolean
   collection: ApiCollectionSummary
   images: ApiProductImage[]
+  variants: ApiProductVariant[]
+  finish_options: ApiFinishOption[]
 }
 
 type GetProductsResponse = ApiProduct[]
@@ -56,7 +75,7 @@ function lowestPrice(p: Product) {
 
 // ── Transformer ────────────────────────────────────────────────────────────────
 
-function toFrontendProduct(p: ApiProduct): Product {
+export function toFrontendProduct(p: ApiProduct): Product {
   const images: ProductImageType[] = p.images.map((img, i) => ({
     url: img.url,
     alt: img.alt || p.name,
@@ -72,18 +91,36 @@ function toFrontendProduct(p: ApiProduct): Product {
     description: p.description,
     deliveryDays: p.delivery_days ?? 14,
     currency: 'INR',
-    variants: [
-      {
-        id: `v-${p.id}`,
-        sku: p.slug.toUpperCase().replace(/-/g, '_'),
-        sizeLabel: p.dimensions,
-        dimensionsCm: p.dimensions,
-        basePricePaise: Math.round(p.price * 100),
-        stockQty: 10,
-        weightGrams: 1000,
-      },
-    ],
-    finishOptions: [],
+    // Real variants when the API supplies them. The fallback synthesises a single
+    // variant from the product's own price so products that predate the
+    // product_variants table still render.
+    variants: p.variants?.length
+      ? p.variants.map((v) => ({
+          id: v.id,
+          sku: v.sku,
+          sizeLabel: v.size_label,
+          dimensionsCm: v.dimensions_cm ?? v.size_label,
+          basePricePaise: v.base_price_paise,
+          stockQty: v.stock_qty,
+          weightGrams: v.weight_grams,
+        }))
+      : [
+          {
+            id: `v-${p.id}`,
+            sku: p.slug.toUpperCase().replace(/-/g, '_'),
+            sizeLabel: p.dimensions,
+            dimensionsCm: p.dimensions,
+            basePricePaise: Math.round(p.price * 100),
+            stockQty: 0,
+            weightGrams: 0,
+          },
+        ],
+    finishOptions: (p.finish_options ?? []).map((f) => ({
+      id: f.id,
+      name: f.name,
+      swatchHex: f.swatch_hex ?? '#000000',
+      priceDeltaPaise: f.price_delta_paise,
+    })),
     images,
     careInstructions: p.care_instructions ?? [],
     materials: p.materials?.length ? p.materials : [p.material],
@@ -109,8 +146,11 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     return MOCK_PRODUCTS.find((p) => p.slug === slug) ?? null
   }
   try {
-    const raw = await apiFetch<{ data: ApiProduct }>(`/products/${slug}`)
-    return toFrontendProduct(raw.data)
+    // apiFetch already unwraps Laravel's `{ data: ... }` envelope, so this must
+    // not reach for `.data` a second time.
+    const raw = await apiFetch<ApiProduct>(`/products/${slug}`)
+
+    return toFrontendProduct(raw)
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null
     throw error
@@ -196,10 +236,16 @@ export async function getFilteredProducts(
     return list
   }
 
-  // Real API — pass all filters as query params
+  // Real API — pass all filters as query params.
+  // The response must go through toFrontendProduct() like every other path here;
+  // returning the raw payload would type as Product[] but carry snake_case fields
+  // and no `variants`, so any caller reading `.variants` would get undefined.
   const qs = serializeFilters(params).toString()
-  return apiFetch<Product[]>(`/products${qs ? `?${qs}` : ''}`, {
-    revalidate: false, // dynamic filtered pages should not be cached
-  })
+  const raw = await apiFetch<GetProductsResponse>(
+    `/products${qs ? `?${qs}` : ''}`,
+    { revalidate: false } // dynamic filtered pages should not be cached
+  )
+
+  return raw.map(toFrontendProduct)
 }
 
