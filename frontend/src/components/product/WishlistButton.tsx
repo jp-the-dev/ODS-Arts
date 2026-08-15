@@ -4,17 +4,23 @@ import { motion } from 'framer-motion'
 import { useWishlist } from '@/lib/store/wishlist'
 import type { Product } from '@/lib/types/product'
 
-interface WishlistButtonProps {
-  product: Product
-  /** For art prints — pass the art slug; overrides product.slug */
-  artSlug?: string
+/**
+ * Takes either a frame `product` or an art `artSlug` — never both, and never
+ * neither. The union makes that explicit rather than requiring a Product for
+ * art, which callers had to fake.
+ */
+type WishlistButtonProps = {
   /** 'icon' for card overlay (default), 'full' for product page inline row */
   variant?: 'icon' | 'full'
-}
+} & (
+  | { product: Product; artSlug?: never }
+  | { product?: never; artSlug: string }
+)
 
 export default function WishlistButton({ product, artSlug, variant = 'icon' }: WishlistButtonProps) {
   const { isInWishlist, toggleWishlist } = useWishlist()
-  const slug   = artSlug ?? product.slug
+  // One of the two is always present, guaranteed by the prop union above.
+  const slug   = artSlug ?? product!.slug
   const active = isInWishlist(slug)
 
   const handleClick = (e: React.MouseEvent) => {

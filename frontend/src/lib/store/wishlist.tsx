@@ -75,6 +75,8 @@ function wishlistReducer(state: WishlistState, action: WishlistAction): Wishlist
 
 interface WishlistContextValue {
   slugs: string[]
+  /** Catalogue each saved slug belongs to, so consumers can resolve it. */
+  types: Record<string, WishlistItemType>
   count: number
   isInWishlist: (slug: string) => boolean
   addToWishlist: (slug: string, itemType?: WishlistItemType) => void
@@ -200,6 +202,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     <WishlistContext.Provider
       value={{
         slugs: state.slugs,
+        types: state.types,
         count: state.slugs.length,
         isInWishlist,
         addToWishlist,
