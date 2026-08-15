@@ -12,6 +12,7 @@ function readyEnvironment(): void
     config()->set('app.debug', false);
     config()->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
     config()->set('app.frontend_url', 'https://odsarts.in');
+    config()->set('app.name', 'ODSArts');
     config()->set('mail.default', 'smtp');
     config()->set('mail.from.address', 'hello@odsarts.in');
     config()->set('services.razorpay.key', 'rzp_key');
@@ -70,6 +71,17 @@ describe('odsarts:preflight', function (): void {
 
         $this->artisan('odsarts:preflight')
             ->expectsOutputToContain('no active products')
+            ->assertFailed();
+    });
+
+    it('blocks while the app name is still the framework default', function (): void {
+        readyEnvironment();
+        config()->set('app.name', 'Laravel');
+
+        // It is the sender name on every order confirmation, so a customer
+        // would receive mail from "Laravel".
+        $this->artisan('odsarts:preflight')
+            ->expectsOutputToContain('still "Laravel"')
             ->assertFailed();
     });
 

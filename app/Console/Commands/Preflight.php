@@ -88,6 +88,18 @@ class Preflight extends Command
             filled(config('app.key')) ? 'set' : 'missing — run php artisan key:generate',
         );
 
+        // APP_NAME reaches customers: it is the sender name on every order
+        // confirmation and the branding in the mail header and footer.
+        $name = (string) config('app.name');
+
+        $this->record(
+            $name === 'Laravel' ? 'fail' : 'pass',
+            'App name',
+            $name === 'Laravel'
+                ? 'still "Laravel" — order confirmations would be sent from it'
+                : $name,
+        );
+
         $frontend = (string) config('app.frontend_url');
         $isLocal = str_contains($frontend, 'localhost') || str_contains($frontend, '127.0.0.1');
 
