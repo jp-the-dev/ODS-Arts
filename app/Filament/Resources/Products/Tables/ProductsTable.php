@@ -21,9 +21,13 @@ class ProductsTable
     {
         return $table
             ->columns([
+                // Resolved through the model's url accessor rather than a disk:
+                // seeded rows store storefront-relative paths (/images/...) that
+                // live in the Next.js public folder, while uploads go to the
+                // public disk. A fixed disk only renders one of the two.
                 ImageColumn::make('images.path')
                     ->label('Photo')
-                    ->disk('public')
+                    ->getStateUsing(fn ($record): ?string => $record->images->first()?->admin_url)
                     ->width(60)
                     ->height(40)
                     ->defaultImageUrl('https://placehold.co/60x40/F5F0E8/3D2B1F?text=ODS'),

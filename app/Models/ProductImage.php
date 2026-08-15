@@ -28,11 +28,34 @@ class ProductImage extends Model
         return $this->belongsTo(Product::class);
     }
 
-    /** Full public URL of the image. Absolute paths (starting with /) are returned as-is for frontend public assets. */
+    /**
+     * URL for the storefront.
+     *
+     * Seeded rows store a storefront-relative path (/images/...) served from the
+     * Next.js public folder, so it is returned unchanged. Uploaded images live on
+     * the public disk and need an absolute URL, since the storefront is on a
+     * different origin to the API.
+     */
     public function getUrlAttribute(): string
     {
         if (str_starts_with($this->path, '/')) {
             return $this->path;
+        }
+
+        return asset('storage/'.$this->path);
+    }
+
+    /**
+     * URL for the admin panel.
+     *
+     * Identical for uploads, but a storefront-relative path has to be made
+     * absolute against the storefront: the admin is served from the API origin,
+     * where /images/... does not exist.
+     */
+    public function getAdminUrlAttribute(): string
+    {
+        if (str_starts_with($this->path, '/')) {
+            return rtrim((string) config('app.frontend_url'), '/').$this->path;
         }
 
         return asset('storage/'.$this->path);
