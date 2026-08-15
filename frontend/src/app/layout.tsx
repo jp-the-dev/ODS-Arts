@@ -7,6 +7,7 @@ import {
   jost,
 } from '@/lib/fonts'
 import { BRAND } from '@/constants'
+import { AuthProvider } from '@/lib/store/auth'
 import { CartProvider } from '@/lib/store/cart'
 import { WishlistProvider } from '@/lib/store/wishlist'
 import { QuickViewProvider } from '@/providers/QuickViewProvider'
@@ -87,13 +88,15 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col antialiased bg-obsidian text-ivory selection:bg-gold/30">
-        <CartProvider>
-          <WishlistProvider>
-            <QuickViewProvider>
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <QuickViewProvider>
               {children}
-            </QuickViewProvider>
-          </WishlistProvider>
-        </CartProvider>
+              </QuickViewProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

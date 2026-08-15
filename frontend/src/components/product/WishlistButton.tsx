@@ -20,7 +20,7 @@ export default function WishlistButton({ product, artSlug, variant = 'icon' }: W
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    toggleWishlist(slug)
+    toggleWishlist(slug, artSlug ? 'art' : 'frame')
   }
 
   if (variant === 'full') {

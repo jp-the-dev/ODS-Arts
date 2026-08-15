@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/lib/store/cart'
 import { placeOrder, buildOrderRequest } from '@/services/orders.service'
+import { payForOrder, type PaymentOutcome } from '@/services/payment.service'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ export default function CheckoutForm() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderRef, setOrderRef] = useState<string | null>(null)
+  const [payment, setPayment] = useState<PaymentOutcome | null>(null)
 
   // Clear cart and show success when orderRef is set
   useEffect(() => {
@@ -134,12 +136,19 @@ export default function CheckoutForm() {
     setIsSubmitting(true)
 
     try {
-      // placeOrder() handles mock vs real API via NEXT_PUBLIC_USE_MOCK_DATA flag.
-      // When backend is ready: set NEXT_PUBLIC_USE_MOCK_DATA=false in .env.local.
-      // Zero other code changes needed.
+      // The order is created first so an abandoned payment leaves a recoverable
+      // order rather than losing the sale. Payment is attempted straight after.
       const response = await placeOrder(
         buildOrderRequest(form, items, subtotalPaise)
       )
+
+      const outcome = await payForOrder(response.orderReference, {
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+      })
+
+      setPayment(outcome)
       setOrderRef(response.orderReference)
     } catch {
       // Surface a user-friendly error — real ApiValidationError handling
@@ -153,6 +162,24 @@ export default function CheckoutForm() {
   // ── Success Screen ──────────────────────────────────────────────────────────
 
   if (orderRef) {
+    // The screen must not claim payment was taken when it wasn't — an abandoned
+    // or unconfigured payment still leaves a valid, recoverable order.
+    const paid = payment?.status === 'paid'
+    const eyebrow = paid ? 'Payment Received' : 'Order Placed'
+    const heading = paid
+      ? 'Your order is confirmed.'
+      : 'Your order has been placed.'
+    const message = paid
+      ? 'A confirmation has been sent to'
+      : payment?.status === 'pending'
+        ? `${payment.reason} We'll email`
+        : "We'll reach out to"
+    const messageTail = paid
+      ? '. We\u2019ll be in touch when it ships.'
+      : payment?.status === 'pending'
+        ? ' with a link to complete your payment.'
+        : ' within 24 hours to confirm your order details and share a payment link.'
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -202,10 +229,10 @@ export default function CheckoutForm() {
 
         {/* Order confirmed */}
         <p className="font-body text-[10px] uppercase tracking-[0.35em] text-gold mb-3">
-          Order Placed
+          {eyebrow}
         </p>
         <h1 className="font-display text-[clamp(32px,4vw,52px)] text-obsidian leading-tight mb-4">
-          Your order has been placed.
+          {heading}
         </h1>
         <div className="h-[1px] w-12 bg-gold/50 mb-6" />
 
@@ -219,9 +246,9 @@ export default function CheckoutForm() {
 
         {/* Message */}
         <p className="font-body text-[14px] leading-[1.8] text-pewter-dark max-w-sm mb-10">
-          We&apos;ll reach out to{' '}
-          <span className="text-obsidian font-medium">{form.email}</span> within 24 hours to
-          confirm your order details and share a payment link.
+          {message}{' '}
+          <span className="text-obsidian font-medium">{form.email}</span>
+          {messageTail}
         </p>
 
         {/* Delivery info */}
