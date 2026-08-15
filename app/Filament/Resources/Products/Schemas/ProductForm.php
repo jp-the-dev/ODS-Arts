@@ -117,7 +117,17 @@ class ProductForm
                                     ->directory('products')
                                     ->disk('public')
                                     ->imageEditor()
+                                    // Resized in the browser before upload, so a
+                                    // camera original costs neither upload time
+                                    // nor storage. 'contain' keeps the aspect
+                                    // ratio; upscaling is off so a small image is
+                                    // never blown up and softened.
+                                    ->imageResizeMode('contain')
+                                    ->imageResizeTargetWidth('1600')
+                                    ->imageResizeTargetHeight('2000')
+                                    ->imageResizeUpscale(false)
                                     ->maxSize(5120)
+                                    ->helperText('Any size — large images are scaled to fit 1600×2000 automatically.')
                                     ->required(),
 
                                 TextInput::make('alt')

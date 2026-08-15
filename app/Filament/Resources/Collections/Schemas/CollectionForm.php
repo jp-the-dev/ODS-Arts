@@ -101,8 +101,13 @@ class CollectionForm
                             ->directory('collections')
                             ->disk('public')
                             ->imageEditor()
+                            // Landscape hero, so a wider box than product shots.
+                            ->imageResizeMode('contain')
+                            ->imageResizeTargetWidth('1920')
+                            ->imageResizeTargetHeight('1080')
+                            ->imageResizeUpscale(false)
                             ->maxSize(5120)
-                            ->helperText('Recommended: 1600×900px. Max 5MB.'),
+                            ->helperText('Any size — large images are scaled to fit 1920×1080 automatically.'),
                     ]),
 
                 Section::make('Visibility & Ordering')
