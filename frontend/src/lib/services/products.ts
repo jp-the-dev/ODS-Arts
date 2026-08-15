@@ -55,6 +55,8 @@ export interface ApiProduct {
   material: string
   materials: string[]
   dimensions: string
+  /** Authoritative integer paise. `price` is the legacy rupee float. */
+  price_in_paise?: number
   price: number
   is_featured: boolean
   collection: ApiCollectionSummary
@@ -110,7 +112,9 @@ export function toFrontendProduct(p: ApiProduct): Product {
             sku: p.slug.toUpperCase().replace(/-/g, '_'),
             sizeLabel: p.dimensions,
             dimensionsCm: p.dimensions,
-            basePricePaise: Math.round(p.price * 100),
+            // Prefer the integer paise field; the rupee float is a fallback
+            // for any response predating it.
+            basePricePaise: p.price_in_paise ?? Math.round(p.price * 100),
             stockQty: 0,
             weightGrams: 0,
           },

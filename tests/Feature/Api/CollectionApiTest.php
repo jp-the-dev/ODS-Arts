@@ -55,6 +55,33 @@ describe('GET /api/v1/collections', function (): void {
             ->assertOk()
             ->assertJsonCount(0, 'data');
     });
+
+    it('does not paginate unless asked', function (): void {
+        Collection::factory()->create(['slug' => 'a']);
+        Collection::factory()->create(['slug' => 'b']);
+
+        $this->getJson('/api/v1/collections')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonMissingPath('meta.per_page');
+    });
+
+    it('paginates on request while reporting the true total', function (): void {
+        Collection::factory()->create(['slug' => 'a']);
+        Collection::factory()->create(['slug' => 'b']);
+        Collection::factory()->create(['slug' => 'c']);
+
+        $this->getJson('/api/v1/collections?per_page=2')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 3);
+    });
+
+    it('rejects an oversized per_page', function (): void {
+        $this->getJson('/api/v1/collections?per_page=500')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('per_page');
+    });
 });
 
 describe('GET /api/v1/collections/{slug}', function (): void {

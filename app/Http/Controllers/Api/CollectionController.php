@@ -7,18 +7,34 @@ use App\Http\Resources\CollectionResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Collection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CollectionController extends Controller
 {
-    /** GET /api/v1/collections — list all active collections */
-    public function index(): AnonymousResourceCollection
+    /**
+     * GET /api/v1/collections — list all active collections.
+     *
+     * Pagination is opt-in, matching ProductController: without `page` or
+     * `per_page` the full collection is returned unwrapped, so existing callers
+     * keep the response shape they depend on.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $collections = Collection::active()
-            ->orderBy('sort_order')
-            ->get();
+        $validated = $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
 
-        return CollectionResource::collection($collections);
+        $query = Collection::active()->orderBy('sort_order')->orderBy('id');
+
+        if (isset($validated['page']) || isset($validated['per_page'])) {
+            return CollectionResource::collection(
+                $query->paginate((int) ($validated['per_page'] ?? 15))->withQueryString()
+            );
+        }
+
+        return CollectionResource::collection($query->get());
     }
 
     /** GET /api/v1/collections/{slug}/products — products belonging to one collection */

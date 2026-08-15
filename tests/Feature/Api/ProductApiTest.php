@@ -30,11 +30,14 @@ describe('GET /api/v1/products', function (): void {
             ->assertJsonPath('data.0.images.0.alt', 'first');
     });
 
-    it('exposes price in rupees, converted from paise', function (): void {
+    it('exposes price as integer paise and as a rupee float', function (): void {
         Product::factory()->create(['price_in_paise' => 249900]);
 
+        // Paise is authoritative; the float is kept for existing consumers.
+        // Round-tripping paise → rupees → paise is the precision risk this avoids.
         $this->getJson('/api/v1/products')
             ->assertOk()
+            ->assertJsonPath('data.0.price_in_paise', 249900)
             ->assertJsonPath('data.0.price', 2499);
     });
 

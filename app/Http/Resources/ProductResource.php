@@ -24,7 +24,10 @@ class ProductResource extends JsonResource
             'material' => $this->resource->material,
             'materials' => $this->resource->materials ?? [],
             'dimensions' => $this->resource->dimensions,
-            // price exposed as rupees float (e.g. 1499.00)
+            // Authoritative integer paise — the storefront works in paise, so
+            // this avoids a float round-trip (paise → rupees → paise).
+            'price_in_paise' => $this->resource->price_in_paise,
+            // Retained as a rupee float for existing consumers.
             'price' => $this->resource->price,
             'is_featured' => $this->resource->is_featured,
             'collection' => $this->whenLoaded('collection', fn () => [

@@ -47,4 +47,22 @@ describe('GET /api/v1/testimonials', function (): void {
             ->assertOk()
             ->assertJsonCount(0, 'data');
     });
+
+    it('does not paginate unless asked', function (): void {
+        Testimonial::factory()->count(3)->create();
+
+        $this->getJson('/api/v1/testimonials')
+            ->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonMissingPath('meta.per_page');
+    });
+
+    it('paginates on request', function (): void {
+        Testimonial::factory()->count(3)->create();
+
+        $this->getJson('/api/v1/testimonials?per_page=2')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 3);
+    });
 });
