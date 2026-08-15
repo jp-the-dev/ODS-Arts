@@ -116,8 +116,8 @@ describe('tracking a failed order', function (): void {
     });
 });
 
-describe('guest checkout', function (): void {
-    it('lets someone with no account place an order', function (): void {
+describe('guest checkout is closed', function (): void {
+    it('refuses to create an order without an account', function (): void {
         $product = Product::factory()->create();
         $variant = ProductVariant::factory()->for($product)->create([
             'base_price_paise' => 899900,
@@ -136,17 +136,14 @@ describe('guest checkout', function (): void {
                 'productSlug' => $product->slug,
                 'variantId' => (string) $variant->id,
                 'quantity' => 1,
-                // Deliberately wrong: the server prices the line itself and must
-                // never trust this.
-                'unitPricePaise' => 1,
+                'unitPricePaise' => 899900,
             ]],
-            'subtotalPaise' => 1,
+            'subtotalPaise' => 899900,
             'currency' => 'INR',
-        ])->assertCreated();
+        ])->assertUnauthorized();
 
-        $order = Order::where('email', 'guest@example.com')->first();
-
-        expect($order?->user_id)->toBeNull()
-            ->and($order?->total)->toBe(899900);
+        expect(Order::where('email', 'guest@example.com')->exists())->toBeFalse()
+            // Stock must not move for an order that was never created.
+            ->and($variant->fresh()->stock_qty)->toBe(5);
     });
 });

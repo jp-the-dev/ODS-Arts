@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
 
 describe('rate limiting', function (): void {
     it('throttles the contact form after 5 submissions a minute', function (): void {
@@ -28,6 +30,10 @@ describe('rate limiting', function (): void {
     });
 
     it('throttles checkout after 10 attempts a minute', function (): void {
+        // Checkout is behind auth:sanctum, so an unauthenticated flood would be
+        // rejected before the throttle was ever reached.
+        Sanctum::actingAs(User::factory()->create());
+
         $variant = ProductVariant::factory()->for(Product::factory())->create([
             'sku' => 'BOX', 'base_price_paise' => 100000, 'stock_qty' => 500,
         ]);

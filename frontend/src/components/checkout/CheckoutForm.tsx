@@ -112,7 +112,7 @@ export default function CheckoutForm() {
   const [orderRef, setOrderRef] = useState<string | null>(null)
   const [payment, setPayment] = useState<PaymentOutcome | null>(null)
 
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [saveAddress, setSaveAddress] = useState(false)
   // Tracks whether the form was filled from a saved address, so we don't offer
   // to save something the customer already has.
@@ -210,6 +210,42 @@ export default function CheckoutForm() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // ── Sign-in wall ────────────────────────────────────────────────────────────
+
+  // Checkout requires an account. The API enforces this too — POST /orders is
+  // behind auth:sanctum — so this is the courteous half of the same rule rather
+  // than the rule itself.
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div className="border border-obsidian/8 bg-white px-8 py-14 text-center">
+        <p className="font-body text-[10px] uppercase tracking-[0.3em] text-gold mb-3">
+          Account Required
+        </p>
+        <h2 className="font-display text-[clamp(24px,3vw,34px)] text-obsidian leading-tight mb-4">
+          Please sign in to complete your order.
+        </h2>
+        <p className="font-body text-[14px] leading-[1.8] text-pewter-dark max-w-sm mx-auto mb-8">
+          Your basket is waiting. Signing in lets us keep your order, your
+          addresses and your delivery updates in one place.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <Link
+            href="/login?next=%2Fcheckout"
+            className="inline-flex items-center gap-3 bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-walnut transition-colors duration-500"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/register?next=%2Fcheckout"
+            className="inline-flex items-center gap-3 border border-obsidian/15 text-obsidian font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:border-obsidian/40 transition-colors duration-500"
+          >
+            Create an Account
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   // ── Success Screen ──────────────────────────────────────────────────────────

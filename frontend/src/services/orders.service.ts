@@ -14,6 +14,7 @@
  */
 
 import { apiFetch } from '@/lib/api/client'
+import { authHeaders } from '@/lib/store/auth'
 import type {
   PlaceOrderRequest,
   PlaceOrderResponse,
@@ -115,5 +116,8 @@ export async function placeOrder(
     method: 'POST',
     body: JSON.stringify(request),
     revalidate: false, // POST — never cache
+    // Checkout requires an account: the route is behind auth:sanctum and every
+    // order is attached to the customer who placed it.
+    headers: authHeaders(),
   })
 }

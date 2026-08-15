@@ -72,12 +72,14 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
     // Newsletter
     Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->middleware('throttle:forms')->name('newsletter.subscribe');
 
-    // Orders — guest checkout allowed; attaches to the user when a token is sent
-    Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:orders')->name('orders.store');
+    // Orders require an account. Guest checkout was removed deliberately: every
+    // order now belongs to a customer who can sign in and see it.
+    Route::post('/orders', [OrderController::class, 'store'])->middleware(['auth:sanctum', 'throttle:orders'])->name('orders.store');
 
-    // Payments. Public because guest orders have no account to authenticate
-    // against — the order reference is the capability, and /verify additionally
-    // requires a Razorpay signature that cannot be forged.
+    // Payments carry no auth middleware of their own, but they are not open:
+    // every order now has an owner, and findPayableOrder returns nothing for a
+    // request that is not that owner — so an unauthenticated call 404s. /verify
+    // additionally requires a Razorpay signature that cannot be forged.
     Route::post('/orders/{orderNumber}/pay', [PaymentController::class, 'pay'])->middleware('throttle:payments')->name('orders.pay');
     Route::post('/orders/{orderNumber}/verify', [PaymentController::class, 'verify'])->middleware('throttle:payments')->name('orders.verify');
     Route::post('/orders/{orderNumber}/payment-failed', [PaymentController::class, 'failed'])->middleware('throttle:payments')->name('orders.payment-failed');

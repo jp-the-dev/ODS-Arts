@@ -441,6 +441,10 @@ Carried over deliberately; none blocks taking orders.
   framing *price calculator* (`/api/v1/framing/calculate-price`) is live.
 - **Collection hero images and art category covers** are shipped with the
   frontend build, not admin-managed. Changing them is a code deploy.
+- **Checkout requires an account.** Guest checkout was removed: `POST /orders`
+  is behind `auth:sanctum`, the cart refuses to accept items while signed out,
+  and the checkout page shows a sign-in wall. Orders placed before that change
+  still have `user_id = null` and remain trackable by reference.
 - **Stock is reserved at checkout, not at payment.** An unpaid order holds its
   units until the scheduled release returns them, so a burst of abandoned carts
   can briefly show popular sizes as unavailable.

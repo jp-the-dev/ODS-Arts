@@ -6,6 +6,8 @@ import { motion } from 'framer-motion'
 import type { Product, ProductVariant, FinishOption } from '@/lib/types/product'
 import { formatPrice } from '@/lib/types/product'
 import { useCart } from '@/lib/store/cart'
+import { useAuth } from '@/lib/store/auth'
+import { usePathname } from 'next/navigation'
 import WishlistButton from '@/components/product/WishlistButton'
 
 interface ProductConfiguratorProps {
@@ -13,7 +15,12 @@ interface ProductConfiguratorProps {
 }
 
 export default function ProductConfigurator({ product }: ProductConfiguratorProps) {
-  const { addItem } = useCart()
+  const { addItem, canAdd } = useCart()
+  // Only for the initial check: offering "sign in" to someone who is already
+  // signed in, for the half second before their token is verified, reads as
+  // being logged out.
+  const { isLoading: authLoading } = useAuth()
+  const pathname = usePathname()
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(product.variants[0])
   const defaultFinish: FinishOption = product.finishOptions[0] ?? { id: 'standard', name: 'Standard', swatchHex: '#000000', priceDeltaPaise: 0 }
   const [selectedFinish, setSelectedFinish]   = useState<FinishOption>(defaultFinish)
@@ -26,6 +33,10 @@ export default function ProductConfigurator({ product }: ProductConfiguratorProp
   const lowStock  = inStock && selectedVariant.stockQty <= 3
 
   function handleAddToCart() {
+    // Guarded here as well as by hiding the button: the handler is the thing
+    // that must not run, and a stale render should never slip an item in.
+    if (!canAdd) return
+
     addItem(product, selectedVariant, selectedFinish, quantity)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
@@ -195,10 +206,20 @@ export default function ProductConfigurator({ product }: ProductConfiguratorProp
       </div>
 
       {/* ── Add to cart CTA ── */}
+      {/* Signed-out customers get a way in rather than a dead button: the
+          product and options they chose are still here when they come back. */}
+      {!authLoading && !canAdd ? (
+        <Link
+          href={`/login?next=${encodeURIComponent(pathname)}`}
+          className="block w-full py-5 text-center bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] hover:bg-walnut transition-all duration-500"
+        >
+          Sign in to Add to Cart
+        </Link>
+      ) : (
       <motion.button
         whileTap={{ scale: 0.98 }}
         onClick={handleAddToCart}
-        disabled={!inStock}
+        disabled={!inStock || !canAdd}
         className={`w-full py-5 font-body text-[11px] uppercase tracking-[0.22em] transition-all duration-500 focus:outline-none ${
           added
             ? 'bg-walnut text-ivory'
@@ -209,6 +230,7 @@ export default function ProductConfigurator({ product }: ProductConfiguratorProp
       >
         {added ? '✓ Added to Cart' : inStock ? 'Add to Cart' : 'Out of Stock'}
       </motion.button>
+      )}
 
       {/* ── Wishlist ── */}
       <div className="flex justify-center">

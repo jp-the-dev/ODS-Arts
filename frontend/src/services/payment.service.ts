@@ -12,6 +12,7 @@
  */
 
 import { apiFetch, ApiError } from '@/lib/api/client'
+import { authHeaders } from '@/lib/store/auth'
 
 const RAZORPAY_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js'
 
@@ -103,7 +104,7 @@ export async function startPayment(
   try {
     return await apiFetch<StartPaymentResponse>(
       `/orders/${encodeURIComponent(orderReference)}/pay`,
-      { method: 'POST', revalidate: false }
+      { method: 'POST', revalidate: false, headers: authHeaders() }
     )
   } catch (error) {
     // 503 = RAZORPAY_KEY/SECRET not set. Treat as "cannot collect payment now"
@@ -119,6 +120,7 @@ export async function verifyPayment(
 ): Promise<void> {
   await apiFetch(`/orders/${encodeURIComponent(orderReference)}/verify`, {
     method: 'POST',
+    headers: authHeaders(),
     body: JSON.stringify({
       razorpay_payment_id: response.razorpay_payment_id,
       razorpay_order_id: response.razorpay_order_id,
@@ -144,6 +146,7 @@ export async function reportPaymentFailed(
   try {
     await apiFetch(`/orders/${encodeURIComponent(orderReference)}/payment-failed`, {
       method: 'POST',
+      headers: authHeaders(),
       body: JSON.stringify({ razorpay_order_id: razorpayOrderId, reason }),
       revalidate: false,
     })

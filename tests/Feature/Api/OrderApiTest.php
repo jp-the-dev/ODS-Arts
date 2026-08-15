@@ -50,7 +50,26 @@ function frameLine(ProductVariant $variant, int $qty = 1, ?int $claimedPrice = n
 }
 
 describe('POST /api/v1/orders', function (): void {
-    beforeEach(fn () => Mail::fake());
+    beforeEach(function (): void {
+        Mail::fake();
+        // Checkout requires an account — guest checkout was removed.
+        Sanctum::actingAs(User::factory()->create());
+    });
+
+    it('refuses an order from someone who is not signed in', function (): void {
+        // The route is the enforcement point; the storefront's sign-in wall is
+        // only the courteous half of the same rule.
+        app()['auth']->forgetGuards();
+
+        $variant = ProductVariant::factory()->for(Product::factory())->create([
+            'sku' => 'BOX', 'base_price_paise' => 100000, 'stock_qty' => 5,
+        ]);
+
+        $this->postJson('/api/v1/orders', orderPayload([frameLine($variant)]))
+            ->assertUnauthorized();
+
+        $this->assertDatabaseCount('orders', 0);
+    });
 
     it('queues a confirmation email to the buyer', function (): void {
         $variant = ProductVariant::factory()->for(Product::factory())->create([
@@ -65,7 +84,7 @@ describe('POST /api/v1/orders', function (): void {
         );
     });
 
-    it('places a guest order and returns a reference', function (): void {
+    it('places an order and returns a reference', function (): void {
         $product = Product::factory()->create(['name' => 'Classic Box']);
         $variant = ProductVariant::factory()->for($product)->create([
             'sku' => 'BOX-8X10', 'base_price_paise' => 899900, 'stock_qty' => 5,
@@ -80,7 +99,8 @@ describe('POST /api/v1/orders', function (): void {
 
         $this->assertDatabaseHas('orders', [
             'email' => 'priya@example.com',
-            'user_id' => null,
+            // Every order now belongs to the customer who placed it.
+            'user_id' => auth()->id(),
             'total' => 1799800,
             'status' => 'pending',
             'payment_status' => 'pending',

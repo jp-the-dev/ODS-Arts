@@ -149,6 +149,13 @@ interface CartContextValue {
   isDrawerOpen: boolean
   subtotalPaise: number
   totalItems: number
+  /**
+   * Whether the cart will accept items. False while signed out, and while the
+   * initial auth check is still running — an add during that window would be
+   * silently dropped, so callers gate their controls on this rather than
+   * re-deriving the rule.
+   */
+  canAdd: boolean
   addItem: (product: Product, variant: ProductVariant, finish: FinishOption, quantity?: number) => void
   addArtItem: (artProduct: ArtProduct, artVariant: ArtMaterialVariant, quantity?: number) => void
   removeItem: (key: string) => void
@@ -266,16 +273,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer)
   }, [state.items, isAuthenticated, authLoading])
 
+  // Shopping requires an account. Guarding both adds here rather than only in
+  // the UI means a new caller cannot reintroduce guest carts by accident, and
+  // there is no half-filled cart to reconcile at the login wall.
   const addItem = useCallback(
-    (product: Product, variant: ProductVariant, finish: FinishOption, quantity = 1) =>
-      dispatch({ type: 'ADD_ITEM', payload: { product, variant, finish, quantity } }),
-    []
+    (product: Product, variant: ProductVariant, finish: FinishOption, quantity = 1) => {
+      if (!isAuthenticated) return
+
+      dispatch({ type: 'ADD_ITEM', payload: { product, variant, finish, quantity } })
+    },
+    [isAuthenticated]
   )
 
   const addArtItem = useCallback(
-    (artProduct: ArtProduct, artVariant: ArtMaterialVariant, quantity = 1) =>
-      dispatch({ type: 'ADD_ART_ITEM', payload: { artProduct, artVariant, quantity } }),
-    []
+    (artProduct: ArtProduct, artVariant: ArtMaterialVariant, quantity = 1) => {
+      if (!isAuthenticated) return
+
+      dispatch({ type: 'ADD_ART_ITEM', payload: { artProduct, artVariant, quantity } })
+    },
+    [isAuthenticated]
   )
 
   const removeItem = useCallback(
@@ -300,6 +316,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const totalItems = state.items.reduce((sum, i) => sum + i.quantity, 0)
 
+  const canAdd = isAuthenticated
+
   return (
     <CartContext.Provider
       value={{
@@ -307,6 +325,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         isDrawerOpen: state.isDrawerOpen,
         subtotalPaise,
         totalItems,
+        canAdd,
         addItem,
         addArtItem,
         removeItem,

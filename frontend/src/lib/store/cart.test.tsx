@@ -44,14 +44,74 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 const renderCart = () => renderHook(() => useCart(), { wrapper })
 
-beforeEach(() => {
-  // Signed out unless a test says otherwise, so sync stays off by default.
+/** Render and wait until the cart will accept items. */
+async function renderSignedInCart() {
+  const rendered = renderCart()
+
+  await waitFor(() => expect(rendered.result.current.canAdd).toBe(true))
+
+  return rendered
+}
+
+const TOKEN_KEY = 'odsarts_token_v1'
+
+const USER = {
+  id: 1, name: 'Priya Mehta', email: 'priya@example.com', phone: null,
+  auth_provider: 'email', avatar_url: null, created_at: '2026-08-01T00:00:00Z',
+}
+
+/**
+ * Shopping requires an account, so the cart refuses to add anything while
+ * signed out. Every test that puts something in the cart signs in first.
+ */
+function signIn() {
+  localStorage.setItem(TOKEN_KEY, 'tok_test')
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) =>
+      String(input).includes('/auth/user')
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ data: USER }),
+          } as Response)
+        : // Cart sync and everything else stay offline: these tests are about
+          // local state, not the server round trip.
+          Promise.reject(new Error('no network'))
+    )
+  )
+}
+
+function signOut() {
+  localStorage.removeItem(TOKEN_KEY)
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('no network'))))
+}
+
+beforeEach(() => {
+  signIn()
 })
 
 describe('cart store', () => {
-  it('adds a frame with the finish delta folded into the unit price', async () => {
+  it('refuses to add anything while signed out', async () => {
+    // Shopping requires an account. Guarding the store rather than only the
+    // button means a new caller cannot reintroduce guest carts by accident.
+    signOut()
+
     const { result } = renderCart()
+
+    await waitFor(() => expect(result.current.canAdd).toBe(false))
+
+    act(() => {
+      result.current.addItem(product, variant, finish, 1)
+      result.current.addArtItem(artProduct, artVariant, 1)
+    })
+
+    expect(result.current.items).toHaveLength(0)
+  })
+
+  it('adds a frame with the finish delta folded into the unit price', async () => {
+    const { result } = await renderSignedInCart()
 
     act(() => {
       result.current.addItem(product, variant, { ...finish, priceDeltaPaise: 100000 }, 2)
@@ -67,7 +127,7 @@ describe('cart store', () => {
   })
 
   it('merges a repeat add of the same variant and finish', async () => {
-    const { result } = renderCart()
+    const { result } = await renderSignedInCart()
 
     act(() => {
       result.current.addItem(product, variant, finish, 1)
@@ -79,7 +139,7 @@ describe('cart store', () => {
   })
 
   it('keeps the same variant in different finishes as separate lines', async () => {
-    const { result } = renderCart()
+    const { result } = await renderSignedInCart()
 
     act(() => {
       result.current.addItem(product, variant, finish, 1)
@@ -90,7 +150,7 @@ describe('cart store', () => {
   })
 
   it('holds frames and art in one cart', async () => {
-    const { result } = renderCart()
+    const { result } = await renderSignedInCart()
 
     act(() => {
       result.current.addItem(product, variant, finish, 1)
@@ -103,7 +163,7 @@ describe('cart store', () => {
   })
 
   it('totals the subtotal across mixed items', async () => {
-    const { result } = renderCart()
+    const { result } = await renderSignedInCart()
 
     act(() => {
       result.current.addItem(product, variant, finish, 2) // 2 × 899900
@@ -115,7 +175,7 @@ describe('cart store', () => {
   })
 
   it('removes and clears', async () => {
-    const { result } = renderCart()
+    const { result } = await renderSignedInCart()
 
     act(() => {
       result.current.addItem(product, variant, finish, 1)
@@ -136,7 +196,7 @@ describe('cart store', () => {
   })
 
   it('survives a reload by restoring from localStorage', async () => {
-    const first = renderCart()
+    const first = await renderSignedInCart()
 
     act(() => {
       first.result.current.addItem(product, variant, finish, 3)
@@ -155,7 +215,7 @@ describe('cart store', () => {
   it('ignores corrupt stored cart data rather than crashing', async () => {
     localStorage.setItem('odsarts_cart_v1', '{ not json')
 
-    const { result } = renderCart()
+    const { result } = await renderSignedInCart()
 
     await waitFor(() => expect(result.current.items).toEqual([]))
   })
