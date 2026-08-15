@@ -22,8 +22,8 @@ We have received your order **{{ $order->order_number }}** and it is now being p
 
 Your frames are made to order, so please allow 7–14 working days for delivery. We will email you again as soon as your order ships.
 
-<x-mail::button :url="config('app.frontend_url', config('app.url'))">
-Visit ODSArts
+<x-mail::button :url="rtrim(config('app.frontend_url'), '/').'/orders/'.$order->order_number">
+Track your order
 </x-mail::button>
 
 With care,<br>

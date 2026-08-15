@@ -318,21 +318,32 @@ export default function CheckoutForm() {
           ))}
         </div>
 
-        <Link
-          href="/collections"
-          className="inline-flex items-center gap-3 border border-obsidian/30 text-obsidian font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-obsidian hover:text-ivory transition-colors duration-500"
-        >
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
-            <path
-              d="M13 7H1M6 3L2 7l6 4"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Continue Exploring
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* The reference is the customer's handle on the order — guests have
+              no account, so this link is how they find it again. */}
+          <Link
+            href={`/orders/${orderRef}`}
+            className="inline-flex items-center gap-3 bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-obsidian/90 transition-colors duration-500"
+          >
+            Track this order
+          </Link>
+
+          <Link
+            href="/collections"
+            className="inline-flex items-center gap-3 border border-obsidian/30 text-obsidian font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-obsidian hover:text-ivory transition-colors duration-500"
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
+              <path
+                d="M13 7H1M6 3L2 7l6 4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Continue Exploring
+          </Link>
+        </div>
       </motion.div>
     )
   }

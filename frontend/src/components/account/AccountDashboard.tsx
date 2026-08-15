@@ -149,9 +149,12 @@ export default function AccountDashboard() {
             {orders.map((order) => (
               <div key={order.id} className="py-5 flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="font-display text-[17px] text-obsidian tracking-wide">
+                  <Link
+                    href={`/orders/${order.order_number}`}
+                    className="font-display text-[17px] text-obsidian tracking-wide hover:text-gold transition-colors"
+                  >
                     {order.order_number}
-                  </p>
+                  </Link>
                   <p className="font-body text-[12px] text-pewter mt-1">
                     {order.ordered_at
                       ? new Date(order.ordered_at).toLocaleDateString('en-IN', {
@@ -175,6 +178,12 @@ export default function AccountDashboard() {
                   <span className="font-display text-[17px] text-obsidian">
                     {formatPrice(Number(order.total))}
                   </span>
+                  <Link
+                    href={`/orders/${order.order_number}`}
+                    className="font-body text-[10px] uppercase tracking-[0.2em] text-pewter hover:text-obsidian transition-colors whitespace-nowrap"
+                  >
+                    Track →
+                  </Link>
                 </div>
               </div>
             ))}
