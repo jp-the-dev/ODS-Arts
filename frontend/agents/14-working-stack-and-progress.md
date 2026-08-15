@@ -2,7 +2,7 @@
 
 > **Document Purpose:** The definitive record of the active technology stack for ODSArts and a chronological log of development completed to date — **frontend and backend**. Both stacks now live in one repository and are owned by the same team; see the root `CLAUDE.md` for the working flow.
 >
-> **Status at a glance (Aug 2026):** the frontend is far ahead of the backend. 12 of 15 routes are built and the marketing/art experience is complete, but only 3 of 6 data verticals (products, collections, **art**) are actually served by Laravel. Search, orders and custom-framing quotes still run on frontend mock fixtures. The live API is now covered by 91 Pest feature tests (§3.4–3.6), and the `temp_repo` schema drift has been reconciled (§3.8) — art is live, 21 routes registered. See §3 for what exists server-side and §6 for the gap list.
+> **Status at a glance (Aug 2026):** the platform is feature-complete end to end — browse, product pages, cart, guest or account checkout, Razorpay payment, confirmation email, fulfilment and tracking, with a full Filament admin. All 15 page routes are built and 43 API routes are registered. 5 of 6 data verticals run on Laravel; only custom-framing quotes still use fixtures. Covered by **242 Pest feature tests** and **32 Vitest frontend tests**. What remains before launch is configuration, not code — see §3.2b for accepted limitations.
 
 ---
 
@@ -14,7 +14,7 @@ We are strictly following a cutting-edge, highly optimized frontend stack. All a
 *   **Laravel 13** on **PHP 8.5** — storefront REST API under `/api/v1`, all routes public (no auth on the storefront).
 *   **Filament v4** — admin panel at `/admin`, backed by Livewire 3.
 *   **MySQL** — database `laravel_api`; money stored as integer paise (`*_in_paise`, but `base_price_paise` / `price_delta_paise` on variants and finishes — see §3.6).
-*   **Pest v4** + **Pint** — test runner and formatter. 91 feature tests cover the live API (`php artisan test --compact`); run `vendor/bin/pint --dirty --format agent` after PHP changes.
+*   **Pest v4** + **Pint** — test runner and formatter. 242 feature tests cover the live API (`php artisan test --compact`); run `vendor/bin/pint --dirty --format agent` after PHP changes.
 *   **Laravel Boost v2 / MCP** — agent tooling; its rules live in the root `AGENTS.md`.
 
 ### Core Frameworks (frontend)
@@ -62,8 +62,9 @@ src/
 │   │   ├── products.ts         ← Mock-aware product service (getProductsByCollection, getFilteredProducts, etc.)
 │   │   └── search.ts           ← searchProducts() — mock JS filter | real: GET /search?q=
 │   ├── store/
-│   │   ├── cart.tsx            ← CartProvider (Context + useReducer + localStorage)
-│   │   └── wishlist.tsx        ← WishlistProvider (Context + useReducer + localStorage, account-ready)
+│   │   ├── auth.tsx            ← AuthProvider (Sanctum token, user hydration)
+│   │   ├── cart.tsx            ← CartProvider (localStorage, merged with the server on sign-in)
+│   │   └── wishlist.tsx        ← WishlistProvider (localStorage + server sync, frames and art)
 │   ├── types/
 │   │   ├── product.ts          ← Rich e-commerce types: Product, Variant, Finish, CartItem
 │   │   └── filters.ts          ← ProductFilterParams, SortKey, serializeFilters, deserializeFilters
@@ -72,11 +73,10 @@ src/
 ├── providers/
 │   └── QuickViewProvider.tsx   ← Context + lazy-loaded QuickViewModal (openQuickView/closeQuickView)
 │
-├── services/                   ← API service layer (real API calls via apiFetch)
-│   ├── collections.service.ts  ← getCollections(), getCollectionBySlug() [scaffolded, ready]
-│   ├── orders.service.ts       ← placeOrder(), buildOrderRequest() [mock-aware]
-│   ├── products.service.ts     ← getProducts(), getProductBySlug() [scaffolded, ready]
-│   └── testimonials.service.ts ← getTestimonials() [scaffolded, ready]
+├── services/                   ← Transactional services (catalogue reads live in lib/services)
+│   ├── customFraming.service.ts← quote requests [mock until the endpoint ships]
+│   ├── orders.service.ts       ← placeOrder(), buildOrderRequest()
+│   └── payment.service.ts      ← Razorpay: startPayment(), verifyPayment(), payForOrder()
 │
 ├── types/
 │   └── index.ts                ← Editorial types: Product, Collection, Testimonial, PlaceOrderRequest
@@ -97,14 +97,16 @@ src/
 
 > **URL as state:** All filter/sort/search state lives in URL searchParams via `useSearchParams` + `useRouter`. Never useState alone for filters — it makes pages unshare-able and breaks back navigation.
 
-> **Wishlist pattern:** Stores product slugs only in localStorage. When accounts go live, add `useEffect` to hydrate from `GET /wishlist` — hook API stays identical.
+> **Wishlist pattern:** Stores slugs plus the catalogue each came from, in localStorage, merged with `GET /auth/wishlist` on sign-in. A slug can exist in both catalogues, so the type is what decides how it resolves.
 
 ---
 
 ## 2. Frontend Development Progress
 
-**Route status — 15 `page.tsx` files, all 15 built.** Production build is
-green: 54 static pages generated, TypeScript clean.
+**Route status — 15 `page.tsx` files, all 15 built**, plus `/login`, `/register`,
+`/account` and `/orders/[reference]`. Production build is green: 57 static pages,
+TypeScript clean, and **0 ESLint errors or warnings**. Frontend tests:
+`npm test` (Vitest, 32 tests over the cart, auth and wishlist stores).
 
 | Built | Stub (returns empty `<main />`) |
 |---|---|
