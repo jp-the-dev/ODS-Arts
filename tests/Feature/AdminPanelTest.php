@@ -29,13 +29,42 @@ describe('Filament admin', function (): void {
     ]);
 
     it('renders the orders list with a real order', function (): void {
-        $order = Order::factory()->create(['order_number' => 'ODS-ADMIN']);
+        $order = Order::factory()->create([
+            'order_number' => 'ODS-ADMIN',
+            // A populated address is essential here: TextEntry iterates an array
+            // state, so an empty one silently skips the formatter that broke
+            // this page against real data.
+            'shipping_address' => [
+                'full_name' => 'Priya Mehta', 'email' => 'priya@example.com',
+                'phone' => '+91 9876543210', 'line1' => '12 Marine Drive',
+                'line2' => null, 'city' => 'Mumbai', 'state' => 'Maharashtra',
+                'pincode' => '400020', 'country' => 'IN',
+            ],
+        ]);
         $order->items()->create([
             'name' => 'Classic Box — 8" × 10"', 'sku' => 'BOX-1',
             'unit_price_paise' => 899900, 'quantity' => 1, 'subtotal_paise' => 899900,
         ]);
 
         $this->get('/admin/orders')->assertOk();
+        $this->get("/admin/orders/{$order->id}")->assertOk();
+    });
+
+    it('renders an order whose address uses the older postal_code key', function (): void {
+        // Orders predating the current checkout store a different address shape.
+        $order = Order::factory()->create([
+            'order_number' => 'ODS-LEGACY',
+            'shipping_address' => [
+                'city' => 'brb', 'line1' => 'vrevvb', 'postal_code' => '456664',
+            ],
+        ]);
+
+        $this->get("/admin/orders/{$order->id}")->assertOk();
+    });
+
+    it('renders an order with no address at all', function (): void {
+        $order = Order::factory()->create(['order_number' => 'ODS-NOADDR', 'shipping_address' => null]);
+
         $this->get("/admin/orders/{$order->id}")->assertOk();
     });
 

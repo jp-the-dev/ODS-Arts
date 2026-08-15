@@ -34,16 +34,31 @@ class OrderInfolist
                 Section::make('Delivery')
                     ->columns(2)
                     ->schema([
+                        // Built with state() from the record rather than
+                        // formatStateUsing(): TextEntry treats an array state as
+                        // *multiple* values and calls the formatter once per
+                        // element, so a closure typed against the whole array
+                        // receives a single string and fails.
                         TextEntry::make('shipping_address')
                             ->label('Address')
-                            ->formatStateUsing(fn (?array $state): string => $state ? implode(', ', array_filter([
-                                $state['full_name'] ?? null,
-                                $state['line1'] ?? null,
-                                $state['line2'] ?? null,
-                                $state['city'] ?? null,
-                                $state['state'] ?? null,
-                                $state['pincode'] ?? null,
-                            ])) : '—')
+                            ->state(function ($record): string {
+                                $address = $record->shipping_address;
+
+                                if (! is_array($address)) {
+                                    return filled($address) ? (string) $address : '—';
+                                }
+
+                                $parts = array_filter([
+                                    $address['full_name'] ?? null,
+                                    $address['line1'] ?? null,
+                                    $address['line2'] ?? null,
+                                    $address['city'] ?? null,
+                                    $address['state'] ?? null,
+                                    $address['pincode'] ?? $address['postal_code'] ?? null,
+                                ]);
+
+                                return $parts ? implode(', ', $parts) : '—';
+                            })
                             ->columnSpanFull(),
                         TextEntry::make('courier_name')->placeholder('Not assigned'),
                         TextEntry::make('awb_code')->label('AWB')->placeholder('Not shipped'),
