@@ -16,6 +16,18 @@ const COLLECTION_LABEL: Record<string, string> = {
   heritage: 'Heritage Collection',
 }
 
+/**
+ * `dynamicParams` is deliberately left at its default (true).
+ *
+ * Setting it false would make an unknown slug return a true 404 instead of the
+ * current soft 404 (the not-found page served with HTTP 200, because Next caches
+ * the notFound() result as a prerendered page under ISR). But it would also make
+ * any product added in the admin after the last build unreachable — the listing
+ * revalidates hourly and would link to a page that 404s until a redeploy.
+ *
+ * A few junk URLs answering 200 is the smaller problem than real products being
+ * invisible, so the soft 404 stands until the catalogue has deploy-on-publish.
+ */
 export async function generateStaticParams() {
   const products = await getAllProducts()
 

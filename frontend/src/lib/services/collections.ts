@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api/client'
+import { apiFetch, ApiError } from '@/lib/api/client'
 import type { Collection } from '@/lib/data/collections'
 
 interface ApiCollection {
@@ -63,7 +63,11 @@ export async function getCollectionBySlug(slug: string): Promise<Collection | nu
     const raw = await apiFetch<GetCollectionResponse>(`/collections/${slug}`)
     const collection = 'data' in raw ? (raw as GetCollectionResponse).data : (raw as ApiCollection)
     return toFrontendCollection(collection)
-  } catch {
-    return null
+  } catch (error) {
+    // Only a genuine 404 means "no such collection". Swallowing everything hid
+    // real failures: with the API down, every collection page rendered as
+    // not-found instead of surfacing the outage.
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
   }
 }
