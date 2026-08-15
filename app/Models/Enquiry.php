@@ -18,10 +18,12 @@ class Enquiry extends Model
         'message',
         'type',
         'status',
+        'metadata',
     ];
 
     protected $casts = [
         'type' => 'string',
         'status' => 'string',
+        'metadata' => 'array',
     ];
 }

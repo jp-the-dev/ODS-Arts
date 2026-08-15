@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Product extends Model
 {
@@ -49,6 +50,30 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
+    /** Orderable SKUs, one per size. */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Finishes available for this product. Defined on the collection, since every
+     * product in a collection shares the same finish set.
+     *
+     * @return HasManyThrough<FinishOption, Collection, $this>
+     */
+    public function finishOptions(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            FinishOption::class,
+            Collection::class,
+            'id',            // collections.id
+            'collection_id', // finish_options.collection_id
+            'collection_id', // products.collection_id
+            'id',            // collections.id
+        )->orderBy('finish_options.sort_order');
     }
 
     public function testimonials(): HasMany

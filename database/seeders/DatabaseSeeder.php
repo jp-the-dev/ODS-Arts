@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             CollectionSeeder::class,
+            ProductVariantSeeder::class,
             FrameOptionSeeder::class,
             TestimonialSeeder::class,
         ]);

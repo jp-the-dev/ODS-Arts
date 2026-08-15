@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CollectionResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,12 +21,32 @@ class CollectionController extends Controller
         return CollectionResource::collection($collections);
     }
 
+    /** GET /api/v1/collections/{slug}/products — products belonging to one collection */
+    public function products(string $slug): AnonymousResourceCollection|JsonResponse
+    {
+        $collection = Collection::active()->where('slug', $slug)->first();
+
+        if (! $collection) {
+            return response()->json(['message' => 'Collection not found.'], 404);
+        }
+
+        $products = $collection->products()
+            ->active()
+            ->with(['images', 'variants', 'finishOptions'])
+            ->orderBy('sort_order')
+            ->get();
+
+        return ProductResource::collection($products);
+    }
+
     /** GET /api/v1/collections/{slug} — show a single collection with its products */
     public function show(string $slug): CollectionResource|JsonResponse
     {
         $collection = Collection::active()
             ->where('slug', $slug)
-            ->with(['products' => fn ($q) => $q->active()->with('images')->orderBy('sort_order')])
+            ->with(['products' => fn ($q) => $q->active()
+                ->with(['images', 'variants', 'finishOptions'])
+                ->orderBy('sort_order')])
             ->first();
 
         if (! $collection) {

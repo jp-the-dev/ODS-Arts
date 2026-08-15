@@ -33,6 +33,12 @@ class ProductResource extends JsonResource
                 'name' => $this->resource->collection->name,
             ]),
             'images' => ProductImageResource::collection($this->whenLoaded('images', fn () => $this->resource->images)),
+            'variants' => ProductVariantResource::collection(
+                $this->whenLoaded('variants', fn () => $this->resource->variants)
+            ),
+            'finish_options' => FinishOptionResource::collection(
+                $this->whenLoaded('finishOptions', fn () => $this->resource->finishOptions)
+            ),
         ];
     }
 }
