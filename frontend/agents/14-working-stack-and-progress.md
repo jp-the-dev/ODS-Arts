@@ -309,19 +309,26 @@ endpoints, in `tests/Feature/Api/`. SQLite in-memory with `RefreshDatabase`
 ### 3.2 Known backend gaps & defects
 
 Ordered by impact. These are ours to fix.
-Items 1, 2, 5 and 8 were resolved in the Aug 2026 B1+B2 pass (§3.4);
-items 3 and 7 in the B3 pass (§3.5); item 4 in the B4 pass (§3.6).
-**See §3.7 for unresolved schema drift against `temp_repo`.**
+**All nine are now closed.** Items 1, 2, 5 and 8 in the B1+B2 pass (§3.4);
+3 and 7 in B3 (§3.5); 4 in B4 (§3.6); 9 in the routes pass; and 6 and 7b in the
+final cleanup — `price_in_paise` is now published alongside the rupee float, and
+`/collections` and `/testimonials` gained the same opt-in pagination as
+`/products`. Schema drift (§3.7) was resolved by the port in §3.8.
 
-6. **Unit mismatch across the API.** `ProductResource` exposes `price` as a rupee
-   float (`price_in_paise / 100`) and `FramingController` returns rupees too, while
-   the frontend works exclusively in integer paise and multiplies back
-   (`Math.round(p.price * 100)`). Round-tripping through a float is avoidable
-   precision risk — prefer exposing `price_in_paise` directly.
-7b. **Pagination is still absent from `/collections` and `/testimonials`.**
-   `/products` now paginates on demand (§3.5); the other index actions are still
-   plain `->get()`. Fine at current volumes.
-9. **`routes/web.php` still returns the stock `welcome` view.**
+### 3.2b Known limitations (accepted, not defects)
+
+- **Soft 404 on unknown collection and art slugs.** They render the not-found
+  page but answer HTTP 200, because Next caches the `notFound()` result as a
+  prerendered page under ISR. `dynamicParams = false` fixes the status but makes
+  any item added in the admin after the last build unreachable while the
+  hourly-revalidated listings still link to it — a worse failure. Revisit if
+  publishing ever triggers a deploy. `/products/[slug]` does return a true 404.
+- **`getFilteredProducts()` has no callers.** `FrameGrid` filters an in-memory
+  array, which is instant at this catalogue size. The server-side filter it would
+  call is implemented and tested; wire it up when the catalogue outgrows one fetch.
+- **The Razorpay widget has never run against live keys.** The payment path is
+  proven end to end against a stubbed Razorpay, but the hosted checkout itself
+  needs real test credentials.
 
 ### 3.4 B1 + B2 — Test Suite & Data Integrity [COMPLETED — Aug 2026]
 
