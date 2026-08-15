@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateShiprocketOrderJob;
 use App\Models\Order;
+use App\Services\OrderStock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -136,6 +137,11 @@ class PaymentController extends Controller
             'payment_status' => 'paid',
             'status' => 'confirmed',
         ]);
+
+        // The release job may have already given this order's stock back. Paying
+        // afterwards would otherwise leave the units counted twice: once on the
+        // shelf and once in a box being shipped.
+        OrderStock::retake($order);
 
         // Book the shipment asynchronously — fulfilment must never delay or fail
         // the customer's payment confirmation.
@@ -271,11 +277,21 @@ class PaymentController extends Controller
     {
         $wasUnpaid = $order->payment_status !== 'paid';
 
+        // An order whose stock was released was also cancelled, so a late
+        // capture has to bring it back rather than leave it cancelled and paid.
+        $wasReleased = $order->stock_released_at !== null;
+
         $order->update([
             'razorpay_payment_id' => $entity['id'] ?? $order->razorpay_payment_id,
             'payment_status' => 'paid',
-            'status' => $order->status === 'pending' ? 'confirmed' : $order->status,
+            'status' => in_array($order->status, ['pending', 'cancelled'], true)
+                ? 'confirmed'
+                : $order->status,
         ]);
+
+        if ($wasReleased) {
+            OrderStock::retake($order);
+        }
 
         if ($wasUnpaid) {
             CreateShiprocketOrderJob::dispatch($order);

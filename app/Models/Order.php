@@ -31,6 +31,7 @@ class Order extends Model
         'notes',
         'currency',
         'ordered_at',
+        'stock_released_at',
         'razorpay_order_id',
         'razorpay_payment_id',
         'razorpay_signature',
@@ -51,6 +52,7 @@ class Order extends Model
             'billing_address' => 'array',
             'shipping_address' => 'array',
             'ordered_at' => 'datetime',
+            'stock_released_at' => 'datetime',
             'estimated_delivery_date' => 'date',
         ];
     }

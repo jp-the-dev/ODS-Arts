@@ -17,6 +17,7 @@ storefront, Forge pulls and runs the API on a VPS.
 | Database (MySQL) | Same VPS | — | — |
 | Uploaded images | VPS disk, `storage/app/public` | served at `api.odsarts.in/storage` | — |
 | Queue worker | Same VPS, Supervisor | — | — |
+| Scheduler | Same VPS, cron | — | — |
 
 The storefront never talks to the database. Everything it needs comes through
 `api.odsarts.in/api/v1`, which is why the two can live on different providers.
@@ -178,7 +179,28 @@ This is what sends order confirmations and books shipments
 201 and the customer simply never hears from you — the failure is completely
 silent from the outside.
 
-### 3.6 Images
+### 3.6 Scheduler
+
+Forge → Server → Scheduler, or add the cron by hand:
+
+```
+* * * * * cd /home/forge/api.odsarts.in && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Without it `odsarts:release-abandoned-stock` never runs. Stock is decremented
+when an order is created, before payment, so every abandoned cart and declined
+card holds its units until that job returns them. Nothing errors — the catalogue
+just drifts towards reporting items sold out that nobody bought, and you find
+out when a real customer is turned away.
+
+`ORDER_RELEASE_STOCK_AFTER_MINUTES` sets how long an order may go unpaid first
+(default 60). Check what it would do before trusting it:
+
+```bash
+php artisan odsarts:release-abandoned-stock --dry-run
+```
+
+### 3.7 Images
 
 With a VPS you have a persistent disk, so uploads in `storage/app/public`
 survive deploys and **no code changes are needed**.
@@ -419,6 +441,9 @@ Carried over deliberately; none blocks taking orders.
   framing *price calculator* (`/api/v1/framing/calculate-price`) is live.
 - **Collection hero images and art category covers** are shipped with the
   frontend build, not admin-managed. Changing them is a code deploy.
+- **Stock is reserved at checkout, not at payment.** An unpaid order holds its
+  units until the scheduled release returns them, so a burst of abandoned carts
+  can briefly show popular sizes as unavailable.
 - **No CDN in front of `/storage`.** Fine at launch volume; revisit with R2 when
   image traffic grows.
 - **Single server.** The database, queue worker and uploads share one droplet,

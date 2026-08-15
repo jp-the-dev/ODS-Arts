@@ -195,6 +195,9 @@ class OrderController extends Controller
                     'size' => $variant->size_label,
                     'material' => $variant->material,
                     'art_product_id' => $variant->art_product_id,
+                    // The FK above stays null, so without this the line records
+                    // no way back to the variant whose stock it took.
+                    'art_material_variant_id' => $variant->id,
                 ],
             ];
         }
