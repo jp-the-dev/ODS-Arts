@@ -42,4 +42,10 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /** A staff account with Filament panel access. */
+    public function admin(): static
+    {
+        return $this->state(fn (): array => ['is_admin' => true]);
+    }
 }
