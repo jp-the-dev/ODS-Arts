@@ -61,7 +61,13 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
 
     observer.observe(el)
     return () => observer.disconnect()
-  }, []) // Only on mount/unmount — intentionally no deps
+    // Mount/unmount only, deliberately. The options are read once to configure
+    // the observer and the element's initial style; re-running on a changed
+    // option would tear down and rebuild the observer mid-scroll, and callers
+    // pass literals that never actually change. Suppressed rather than
+    // "fixed", because adding the deps would change documented behaviour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return ref
 }

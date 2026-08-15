@@ -87,6 +87,12 @@ export interface PlaceOrderRequest {
     country: 'IN'
   }
   items: Array<{
+    /**
+     * Which catalogue the line came from. Frames and art have separate variant
+     * tables with independent ids, so the backend cannot infer this from
+     * `variantId` alone — omitting it would risk pricing the wrong item.
+     */
+    itemType: 'frame' | 'art'
     productId: string
     productSlug: string
     variantId: string

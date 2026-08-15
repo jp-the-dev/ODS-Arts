@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ArtProduct, PrintMaterial, ArtMaterialVariant } from '@/lib/types/art'
 import { artMaterials, artSizesForMaterial, PRINT_MATERIALS } from '@/lib/types/art'
@@ -23,11 +23,13 @@ export default function ArtConfigurator({ art }: ArtConfiguratorProps) {
   const [qty,   setQty]   = useState(1)
   const [added, setAdded] = useState(false)
 
-  const handleMaterialChange = useCallback((mat: PrintMaterial) => {
+  // Plain function: the React Compiler memoises this automatically, and the
+  // hand-written useCallback was one it could not preserve.
+  function handleMaterialChange(mat: PrintMaterial) {
     setSelectedMaterial(mat)
     const firstSize = artSizesForMaterial(art, mat)[0]
     setSelectedVariant(firstSize ?? null)
-  }, [art])
+  }
 
   const handleAddToCart = () => {
     if (!selectedVariant) return

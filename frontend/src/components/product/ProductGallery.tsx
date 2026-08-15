@@ -30,7 +30,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           >
             <Image
               src={activeImage.url}
-              alt={activeImage.alt}
+              alt={activeImage.alt || productName}
               fill
               sizes="(max-width: 768px) 100vw, 55vw"
               priority={activeIndex === 0}
@@ -65,7 +65,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             >
               <Image
                 src={img.url}
-                alt={img.alt}
+                alt={img.alt || `${productName} — view ${idx + 1}`}
                 fill
                 sizes="96px"
                 className={`object-cover transition-opacity duration-300 ${

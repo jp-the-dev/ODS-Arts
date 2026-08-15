@@ -27,9 +27,21 @@ export default function ArtGrid({ initialArt }: ArtGridProps) {
   const searchParams  = useSearchParams()
 
   // ── Read URL state ─────────────────────────────────────────────────────────
-  const activeCategories = (searchParams.get('cat')?.split(',').filter(Boolean) ?? []) as ArtStyle[]
-  const activeMaterials  = (searchParams.get('mat')?.split(',').filter(Boolean) ?? []) as PrintMaterial[]
-  const activeSort       = (searchParams.get('sort') ?? 'recommended') as SortKey
+  // Memoised on the raw query strings: splitting produces a fresh array every
+  // render, which changed the filter memo's dependencies each time and stopped
+  // the React Compiler from preserving it.
+  const catParam  = searchParams.get('cat')
+  const matParam  = searchParams.get('mat')
+
+  const activeCategories = useMemo(
+    () => (catParam?.split(',').filter(Boolean) ?? []) as ArtStyle[],
+    [catParam]
+  )
+  const activeMaterials = useMemo(
+    () => (matParam?.split(',').filter(Boolean) ?? []) as PrintMaterial[],
+    [matParam]
+  )
+  const activeSort = (searchParams.get('sort') ?? 'recommended') as SortKey
   const [showFilters, setShowFilters] = useState(false)
 
   // ── URL updater ────────────────────────────────────────────────────────────
@@ -59,25 +71,32 @@ export default function ArtGrid({ initialArt }: ArtGridProps) {
   const clearFilters = () => pushParams({ cat: null, mat: null, sort: null })
 
   // ── Client-side filtering & sorting ───────────────────────────────────────
+  // Written without reassignment or in-place mutation: sorting a reassigned
+  // local is what made the React Compiler bail out of memoising this.
   const filtered = useMemo(() => {
-    let result = [...initialArt]
-
-    if (activeCategories.length > 0) {
-      result = result.filter((a) => activeCategories.includes(a.categorySlug))
-    }
-    if (activeMaterials.length > 0) {
-      result = result.filter((a) =>
-        a.materialVariants.some((v) => activeMaterials.includes(v.material))
-      )
-    }
+    const matches = initialArt.filter((a) => {
+      if (activeCategories.length > 0 && !activeCategories.includes(a.categorySlug)) {
+        return false
+      }
+      if (
+        activeMaterials.length > 0 &&
+        !a.materialVariants.some((v) => activeMaterials.includes(v.material))
+      ) {
+        return false
+      }
+      return true
+    })
 
     switch (activeSort) {
-      case 'price_asc':  result.sort((a, b) => artLowestPrice(a) - artLowestPrice(b)); break
-      case 'price_desc': result.sort((a, b) => artLowestPrice(b) - artLowestPrice(a)); break
-      case 'newest':     result.reverse(); break
+      case 'price_asc':
+        return [...matches].sort((a, b) => artLowestPrice(a) - artLowestPrice(b))
+      case 'price_desc':
+        return [...matches].sort((a, b) => artLowestPrice(b) - artLowestPrice(a))
+      case 'newest':
+        return [...matches].reverse()
+      default:
+        return matches
     }
-
-    return result
   }, [initialArt, activeCategories, activeMaterials, activeSort])
 
   const activeFilterCount = activeCategories.length + activeMaterials.length

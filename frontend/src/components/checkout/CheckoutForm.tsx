@@ -1,10 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/lib/store/cart'
 import { placeOrder, buildOrderRequest } from '@/services/orders.service'
+import { payForOrder, type PaymentOutcome } from '@/services/payment.service'
+import SavedAddressPicker, { type AddressFill } from '@/components/checkout/SavedAddressPicker'
+import { apiFetch } from '@/lib/api/client'
+import { authHeaders, useAuth } from '@/lib/store/auth'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,6 +110,32 @@ export default function CheckoutForm() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderRef, setOrderRef] = useState<string | null>(null)
+  const [payment, setPayment] = useState<PaymentOutcome | null>(null)
+
+  const { isAuthenticated } = useAuth()
+  const [saveAddress, setSaveAddress] = useState(false)
+  // Tracks whether the form was filled from a saved address, so we don't offer
+  // to save something the customer already has.
+  const [usedSavedAddress, setUsedSavedAddress] = useState(false)
+
+  const applySavedAddress = useCallback((fill: AddressFill) => {
+    setForm((prev) => ({ ...prev, ...fill }))
+    setUsedSavedAddress(true)
+    setErrors({})
+  }, [])
+
+  const applyIdentity = useCallback(
+    (identity: { fullName: string; email: string; phone: string }) => {
+      // Only fill blanks — never overwrite what the customer has typed.
+      setForm((prev) => ({
+        ...prev,
+        fullName: prev.fullName || identity.fullName,
+        email: prev.email || identity.email,
+        phone: prev.phone || identity.phone,
+      }))
+    },
+    []
+  )
 
   // Clear cart and show success when orderRef is set
   useEffect(() => {
@@ -134,12 +164,44 @@ export default function CheckoutForm() {
     setIsSubmitting(true)
 
     try {
-      // placeOrder() handles mock vs real API via NEXT_PUBLIC_USE_MOCK_DATA flag.
-      // When backend is ready: set NEXT_PUBLIC_USE_MOCK_DATA=false in .env.local.
-      // Zero other code changes needed.
+      // The order is created first so an abandoned payment leaves a recoverable
+      // order rather than losing the sale. Payment is attempted straight after.
       const response = await placeOrder(
         buildOrderRequest(form, items, subtotalPaise)
       )
+
+      // Save before payment: the order exists either way, and an abandoned
+      // payment shouldn't cost the customer the address they just typed.
+      if (isAuthenticated && saveAddress && !usedSavedAddress) {
+        try {
+          await apiFetch('/auth/addresses', {
+            method: 'POST',
+            headers: authHeaders(),
+            revalidate: false,
+            body: JSON.stringify({
+              label: 'Delivery address',
+              full_name: form.fullName,
+              phone: form.phone,
+              address_line1: form.addressLine1,
+              address_line2: form.addressLine2 || null,
+              city: form.city,
+              state: form.state,
+              postal_code: form.pincode,
+              country: 'IN',
+            }),
+          })
+        } catch {
+          // Never let a failed save block the purchase.
+        }
+      }
+
+      const outcome = await payForOrder(response.orderReference, {
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+      })
+
+      setPayment(outcome)
       setOrderRef(response.orderReference)
     } catch {
       // Surface a user-friendly error — real ApiValidationError handling
@@ -153,6 +215,24 @@ export default function CheckoutForm() {
   // ── Success Screen ──────────────────────────────────────────────────────────
 
   if (orderRef) {
+    // The screen must not claim payment was taken when it wasn't — an abandoned
+    // or unconfigured payment still leaves a valid, recoverable order.
+    const paid = payment?.status === 'paid'
+    const eyebrow = paid ? 'Payment Received' : 'Order Placed'
+    const heading = paid
+      ? 'Your order is confirmed.'
+      : 'Your order has been placed.'
+    const message = paid
+      ? 'A confirmation has been sent to'
+      : payment?.status === 'pending'
+        ? `${payment.reason} We'll email`
+        : "We'll reach out to"
+    const messageTail = paid
+      ? '. We\u2019ll be in touch when it ships.'
+      : payment?.status === 'pending'
+        ? ' with a link to complete your payment.'
+        : ' within 24 hours to confirm your order details and share a payment link.'
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -202,10 +282,10 @@ export default function CheckoutForm() {
 
         {/* Order confirmed */}
         <p className="font-body text-[10px] uppercase tracking-[0.35em] text-gold mb-3">
-          Order Placed
+          {eyebrow}
         </p>
         <h1 className="font-display text-[clamp(32px,4vw,52px)] text-obsidian leading-tight mb-4">
-          Your order has been placed.
+          {heading}
         </h1>
         <div className="h-[1px] w-12 bg-gold/50 mb-6" />
 
@@ -219,9 +299,9 @@ export default function CheckoutForm() {
 
         {/* Message */}
         <p className="font-body text-[14px] leading-[1.8] text-pewter-dark max-w-sm mb-10">
-          We&apos;ll reach out to{' '}
-          <span className="text-obsidian font-medium">{form.email}</span> within 24 hours to
-          confirm your order details and share a payment link.
+          {message}{' '}
+          <span className="text-obsidian font-medium">{form.email}</span>
+          {messageTail}
         </p>
 
         {/* Delivery info */}
@@ -238,21 +318,32 @@ export default function CheckoutForm() {
           ))}
         </div>
 
-        <Link
-          href="/collections"
-          className="inline-flex items-center gap-3 border border-obsidian/30 text-obsidian font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-obsidian hover:text-ivory transition-colors duration-500"
-        >
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
-            <path
-              d="M13 7H1M6 3L2 7l6 4"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Continue Exploring
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* The reference is the customer's handle on the order — guests have
+              no account, so this link is how they find it again. */}
+          <Link
+            href={`/orders/${orderRef}`}
+            className="inline-flex items-center gap-3 bg-obsidian text-ivory font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-obsidian/90 transition-colors duration-500"
+          >
+            Track this order
+          </Link>
+
+          <Link
+            href="/collections"
+            className="inline-flex items-center gap-3 border border-obsidian/30 text-obsidian font-body text-[11px] uppercase tracking-[0.22em] px-8 py-4 hover:bg-obsidian hover:text-ivory transition-colors duration-500"
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="opacity-60">
+              <path
+                d="M13 7H1M6 3L2 7l6 4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Continue Exploring
+          </Link>
+        </div>
       </motion.div>
     )
   }
@@ -346,6 +437,8 @@ export default function CheckoutForm() {
           <div className="h-[1px] w-10 bg-gold/50 mt-3" />
         </div>
 
+        <SavedAddressPicker onSelect={applySavedAddress} onIdentify={applyIdentity} />
+
         <Field label="Address Line 1" id="addressLine1" error={errors.addressLine1}>
           <input
             id="addressLine1"
@@ -418,6 +511,21 @@ export default function CheckoutForm() {
             />
           </Field>
         </div>
+
+        {/* Offered only when there is something new to save. */}
+        {isAuthenticated && !usedSavedAddress && (
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={saveAddress}
+              onChange={(e) => setSaveAddress(e.target.checked)}
+              className="mt-0.5 accent-[#C9A96E] w-4 h-4"
+            />
+            <span className="font-body text-[13px] leading-[1.6] text-pewter-dark">
+              Save this address to my account for next time
+            </span>
+          </label>
+        )}
       </section>
 
       {/* ── Section 3: Order Confirmation ── */}

@@ -13,7 +13,9 @@
  * Persisted to localStorage so the cart survives page refreshes.
  */
 
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
+import { apiFetch } from '@/lib/api/client'
+import { authHeaders, useAuth } from '@/lib/store/auth'
 import type { CartItem, FrameCartItem, ProductVariant, FinishOption, Product } from '@/lib/types/product'
 import type { ArtProduct, ArtMaterialVariant, ArtCartItem } from '@/lib/types/art'
 
@@ -188,6 +190,81 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Ignore storage quota errors
     }
   }, [state.items])
+
+  // ── Server sync (signed-in customers only) ─────────────────────────────────
+  //
+  // localStorage stays the source of truth while browsing; the server copy makes
+  // a cart follow the customer between devices.
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const hasMergedRef = useRef(false)
+
+  // Latest items without making the merge effect depend on them.
+  const stateRef = useRef(state.items)
+
+  // Mirrored in an effect, not during render: React 19 forbids mutating a ref
+  // while rendering, and this only needs to be current by the time an effect runs.
+  useEffect(() => {
+    stateRef.current = state.items
+  }, [state.items])
+
+  // On sign-in, merge rather than overwrite: a guest who filled a cart and then
+  // logged in must not lose it, and neither must their previous session's cart.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || hasMergedRef.current) return
+
+    hasMergedRef.current = true
+
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const remote = await apiFetch<{ items?: CartItem[] }>('/auth/cart', {
+          headers: authHeaders(),
+          revalidate: false,
+        })
+
+        if (cancelled) return
+
+        const remoteItems = remote.items ?? []
+        const localKeys = new Set(stateRef.current.map((item) => item.key))
+        const merged = [
+          ...stateRef.current,
+          ...remoteItems.filter((item) => !localKeys.has(item.key)),
+        ]
+
+        dispatch({ type: 'HYDRATE', payload: merged })
+      } catch {
+        // Offline or a rejected token — the local cart still works.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, isAuthenticated])
+
+  // Reset the merge guard on sign-out so the next sign-in merges again.
+  useEffect(() => {
+    if (!isAuthenticated) hasMergedRef.current = false
+  }, [isAuthenticated])
+
+  // Push every change up once signed in.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !hasMergedRef.current) return
+
+    const timer = setTimeout(() => {
+      apiFetch('/auth/cart/sync', {
+        method: 'POST',
+        body: JSON.stringify({ items: state.items }),
+        headers: authHeaders(),
+        revalidate: false,
+      }).catch(() => {
+        // Best effort — the cart is never lost, it just isn't mirrored yet.
+      })
+    }, 600) // debounce rapid quantity changes into one request
+
+    return () => clearTimeout(timer)
+  }, [state.items, isAuthenticated, authLoading])
 
   const addItem = useCallback(
     (product: Product, variant: ProductVariant, finish: FinishOption, quantity = 1) =>

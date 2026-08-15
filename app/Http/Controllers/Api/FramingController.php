@@ -43,6 +43,7 @@ class FramingController extends Controller
                     $totalModifier += $option->price_modifier_in_paise;
                     $breakdown[$option->type] = [
                         'name' => $option->name,
+                        'modifier_in_paise' => $option->price_modifier_in_paise,
                         'modifier' => $option->price_modifier_in_paise / 100,
                     ];
                 }
@@ -53,6 +54,10 @@ class FramingController extends Controller
 
         return response()->json([
             'data' => [
+                // Paise is authoritative; the rupee floats are kept for display
+                // and for any consumer already reading them.
+                'base_price_in_paise' => $validated['base_price_in_paise'],
+                'total_price_in_paise' => max(0, $totalInPaise),
                 'base_price' => $validated['base_price_in_paise'] / 100,
                 'total_price' => max(0, $totalInPaise) / 100,
                 'breakdown' => $breakdown,

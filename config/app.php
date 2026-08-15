@@ -56,6 +56,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Storefront URL
+    |--------------------------------------------------------------------------
+    |
+    | Where the Next.js storefront is served. Used in transactional email links
+    | and for CORS. Kept separate from APP_URL, which points at the API/admin.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

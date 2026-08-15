@@ -34,13 +34,19 @@ export default function SearchDrawer({ isOpen, onClose }: SearchDrawerProps) {
   const [loading,  setLoading]  = useState(false)
   const [focused,  setFocused]  = useState(0) // keyboard nav index
 
-  // Auto-focus input when drawer opens
+  // Reset and focus when the drawer opens. Deferred rather than run in the
+  // effect body: React 19 flags a synchronous setState there, and the reset only
+  // needs to land before the customer can type.
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 80)
+    if (!isOpen) return
+
+    const timer = setTimeout(() => {
       setQuery('')
       setResults([])
-    }
+      inputRef.current?.focus()
+    }, 80)
+
+    return () => clearTimeout(timer)
   }, [isOpen])
 
   // Debounced search
@@ -186,13 +192,16 @@ export default function SearchDrawer({ isOpen, onClose }: SearchDrawerProps) {
                   </div>
 
                   {results.map((result, i) => {
-                    const isArt = result.type === 'art'
-                    const item = result.item as any
-                    const heroImg = item.images.find((img: any) => img.role === 'hero') ?? item.images[0]
-                    const lp = isArt ? artLowestPrice(item) : Math.min(...item.variants.map((v: any) => v.basePricePaise))
-                    const eyebrow = isArt 
-                      ? `${item.categorySlug.charAt(0).toUpperCase() + item.categorySlug.slice(1)} Art`
-                      : (COLLECTION_LABEL[item.collectionSlug] ?? item.collectionSlug)
+                    // UnifiedResult is a discriminated union, so narrowing on
+                    // `type` gives the right item shape without any casts.
+                    const item = result.item
+                    const heroImg = item.images.find((img) => img.role === 'hero') ?? item.images[0]
+                    const lp = result.type === 'art'
+                      ? artLowestPrice(result.item)
+                      : Math.min(...result.item.variants.map((v) => v.basePricePaise))
+                    const eyebrow = result.type === 'art'
+                      ? `${result.item.categorySlug.charAt(0).toUpperCase() + result.item.categorySlug.slice(1)} Art`
+                      : (COLLECTION_LABEL[result.item.collectionSlug] ?? result.item.collectionSlug)
                     const isFocused = i === focused
 
                     return (

@@ -18,12 +18,26 @@ export type { FramingConfig }
 
 const TOTAL_STEPS = 5
 
-// Slide direction variants
-const slideVariants = (direction: 1 | -1) => ({
-  initial: { x: direction * 60, opacity: 0 },
-  animate: { x: 0, opacity: 1, transition: { duration: 0.55, ease: ANIMATIONS.ease.luxury } },
-  exit: { x: direction * -60, opacity: 0, transition: { duration: 0.35, ease: ANIMATIONS.ease.luxury } },
-})
+/**
+ * Step transition, sliding in the direction of travel.
+ *
+ * Uses framer-motion's `custom` callback form so a single variant object serves
+ * both forward and backward moves. Hoisted out of the component so it is not
+ * rebuilt on every render.
+ */
+const slideVariants = {
+  initial: (direction: number) => ({ x: direction * 60, opacity: 0 }),
+  animate: {
+    x: 0,
+    opacity: 1,
+    transition: { duration: 0.55, ease: ANIMATIONS.ease.luxury },
+  },
+  exit: (direction: number) => ({
+    x: direction * -60,
+    opacity: 0,
+    transition: { duration: 0.35, ease: ANIMATIONS.ease.luxury },
+  }),
+}
 
 export default function CustomFramingWizard() {
   const [step, setStep] = useState(1)
@@ -88,11 +102,7 @@ export default function CustomFramingWizard() {
             <motion.div
               key={step}
               custom={direction}
-              variants={{
-                initial: (dir: number) => ({ x: dir * 60, opacity: 0 }),
-                animate: { x: 0, opacity: 1, transition: { duration: 0.55, ease: ANIMATIONS.ease.luxury } },
-                exit: (dir: number) => ({ x: dir * -60, opacity: 0, transition: { duration: 0.35, ease: ANIMATIONS.ease.luxury } }),
-              }}
+              variants={slideVariants}
               initial="initial"
               animate="animate"
               exit="exit"

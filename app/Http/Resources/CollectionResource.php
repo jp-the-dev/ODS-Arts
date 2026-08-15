@@ -30,6 +30,7 @@ class CollectionResource extends JsonResource
             'cover_image' => $this->resource->cover_image
                 ? asset('storage/'.$this->resource->cover_image)
                 : null,
+            'finish_options' => FinishOptionResource::collection($this->whenLoaded('finishOptions', fn () => $this->resource->finishOptions)),
             'products_count' => $this->whenLoaded('products', fn () => $this->resource->products->count()),
             'products' => $this->whenLoaded('products', fn () => ProductResource::collection($this->resource->products)),
         ];

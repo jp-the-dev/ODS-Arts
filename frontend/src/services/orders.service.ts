@@ -20,7 +20,10 @@ import type {
 } from '@/types'
 import type { CartItem } from '@/lib/types/product'
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA !== 'false'
+// `POST /orders` is not implemented on the Laravel side yet, so checkout stays on
+// the mock order flow even when NEXT_PUBLIC_USE_MOCK_DATA=false takes the rest of
+// the app live. Flip NEXT_PUBLIC_ORDERS_API_READY=true once the endpoint ships.
+const USE_MOCK = process.env.NEXT_PUBLIC_ORDERS_API_READY !== 'true'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -66,6 +69,7 @@ export function buildOrderRequest(
     items: items.map((item) => {
       if (item.itemType === 'art') {
         return {
+          itemType:       'art' as const,
           productId:      item.artProduct.id,
           productSlug:    item.artProduct.slug,
           variantId:      item.artVariant.id,
@@ -75,6 +79,7 @@ export function buildOrderRequest(
         }
       }
       return {
+        itemType:       'frame' as const,
         productId:      item.product.id,
         productSlug:    item.product.slug,
         variantId:      item.variant.id,

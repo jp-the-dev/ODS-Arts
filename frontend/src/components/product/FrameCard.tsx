@@ -8,6 +8,12 @@ import WishlistButton from '@/components/product/WishlistButton'
 interface FrameCardProps {
   product: Product
   priority?: boolean
+  /**
+   * Where the card links. `collection` (default) deep-links into the collection
+   * page's inline configurator via `?frame=`; `pdp` goes to the standalone
+   * product page. Kept opt-in so the collection experience is unchanged.
+   */
+  linkTo?: 'collection' | 'pdp'
 }
 
 const COLLECTION_LABEL: Record<string, string> = {
@@ -16,10 +22,12 @@ const COLLECTION_LABEL: Record<string, string> = {
   heritage: 'Heritage Collection',
 }
 
-export default function FrameCard({ product, priority = false }: FrameCardProps) {
+export default function FrameCard({ product, priority = false, linkTo = 'collection' }: FrameCardProps) {
   const heroImg     = product.images.find(i => i.role === 'hero') ?? product.images[0]
   const lowestPrice = Math.min(...product.variants.map(v => v.basePricePaise))
-  const href        = `/collections/${product.collectionSlug}?frame=${product.slug}`
+  const href        = linkTo === 'pdp'
+    ? `/products/${product.slug}`
+    : `/collections/${product.collectionSlug}?frame=${product.slug}`
   const seriesLabel = COLLECTION_LABEL[product.collectionSlug] ?? product.collectionSlug
 
   return (

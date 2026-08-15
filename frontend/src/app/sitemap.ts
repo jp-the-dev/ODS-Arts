@@ -1,21 +1,24 @@
 /**
  * sitemap.ts — ODSArts full sitemap
  *
- * Covers all static marketing routes + all dynamic collection/art slugs.
- * Dynamic slugs are imported from the same static mock data the pages use —
- * when the backend is live, replace the imports with API calls (async sitemap).
+ * Covers all static marketing routes plus every dynamic collection, frame and
+ * art slug. Dynamic slugs come from the service layer, so they follow whichever
+ * source that vertical is currently reading from (live API or fixtures).
  */
 
 import type { MetadataRoute } from 'next'
 import { COLLECTIONS } from '@/lib/data/collections'
 import { ART_CATEGORIES } from '@/lib/data/artCategories'
-import { MOCK_ART } from '@/lib/mock/art'
+import { getAllArt } from '@/lib/services/art'
+import { getAllProducts } from '@/lib/services/products'
 import { BRAND } from '@/constants'
 
 const base = BRAND.url
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
+
+  const [products, art] = await Promise.all([getAllProducts(), getAllArt()])
 
   // ── Static pages ──────────────────────────────────────────────────────────
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -46,8 +49,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // ── Individual art product pages ───────────────────────────────────────────
-  const artProductRoutes: MetadataRoute.Sitemap = MOCK_ART.map((art) => ({
-    url: `${base}/art/${art.categorySlug}/${art.slug}`,
+  const artProductRoutes: MetadataRoute.Sitemap = art.map((piece) => ({
+    url: `${base}/art/${piece.categorySlug}/${piece.slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }))
+
+  // ── Individual frame product pages ─────────────────────────────────────────
+  const frameProductRoutes: MetadataRoute.Sitemap = products.map((product) => ({
+    url: `${base}/products/${product.slug}`,
     lastModified: now,
     changeFrequency: 'monthly' as const,
     priority: 0.7,
@@ -58,5 +69,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...collectionRoutes,
     ...artCategoryRoutes,
     ...artProductRoutes,
+    ...frameProductRoutes,
   ]
 }

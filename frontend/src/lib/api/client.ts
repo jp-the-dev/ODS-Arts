@@ -9,7 +9,12 @@
  *   the browser without the server-side caching semantics.
  */
 
-const BASE_URL =
+/**
+ * Laravel API origin. Exported so route handlers under `app/api/*` resolve the
+ * same base as the service layer — reading the env var directly there yields
+ * the literal string "undefined/..." when no .env file is present.
+ */
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
 const DEFAULT_REVALIDATE = process.env.NEXT_PUBLIC_API_REVALIDATE 
@@ -23,15 +28,20 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'next'> {
 
 export async function apiFetch<T>(
   endpoint: string,
-  { revalidate, ...options }: ApiFetchOptions = {}
+  // `headers` is pulled out of the rest: spreading `options` last would otherwise
+  // replace the merged header object wholesale, dropping Accept and Content-Type
+  // whenever a caller passes its own header (e.g. Authorization). Without Accept,
+  // Laravel answers a failed auth check with an HTML redirect instead of 401 JSON.
+  { revalidate, headers, ...options }: ApiFetchOptions = {}
 ): Promise<T> {
-  const url = `${BASE_URL}${endpoint}`
+  const url = `${API_BASE_URL}${endpoint}`
 
   const res = await fetch(url, {
+    ...options,
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...headers,
     },
     // Only attach next config on the server (Next.js fetch extension)
     ...(typeof window === 'undefined' && {
@@ -42,7 +52,6 @@ export async function apiFetch<T>(
             ? { revalidate }
             : { revalidate: DEFAULT_REVALIDATE },
     }),
-    ...options,
   })
 
   if (!res.ok) {

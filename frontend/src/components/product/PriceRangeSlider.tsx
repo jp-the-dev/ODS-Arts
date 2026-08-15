@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { formatPrice } from '@/lib/types/product'
 
 interface PriceRangeSliderProps {
@@ -22,9 +22,16 @@ export default function PriceRangeSlider({
   const [localMax, setLocalMax] = useState(currentMax)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Keep local state in sync when props change (e.g. "Clear all")
-  useEffect(() => { setLocalMin(currentMin) }, [currentMin])
-  useEffect(() => { setLocalMax(currentMax)  }, [currentMax])
+  // Re-sync when the props change from outside (e.g. "Clear all"). Adjusted
+  // during render rather than in an effect — this is React's documented pattern
+  // for derived-from-props state, and avoids the extra render an effect costs.
+  const [prevBounds, setPrevBounds] = useState({ min: currentMin, max: currentMax })
+
+  if (prevBounds.min !== currentMin || prevBounds.max !== currentMax) {
+    setPrevBounds({ min: currentMin, max: currentMax })
+    setLocalMin(currentMin)
+    setLocalMax(currentMax)
+  }
 
   const commit = useCallback(
     (min: number, max: number) => {

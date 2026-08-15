@@ -1,17 +1,21 @@
 // POST /api/contact — contact form submission
 // Forwards to Laravel API: POST /api/v1/enquiries
 import { type NextRequest, NextResponse } from 'next/server'
+import { API_BASE_URL } from '@/lib/api/client'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/enquiries`,
+      `${API_BASE_URL}/enquiries`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ ...body, type: 'contact' }),
+        // Callers may declare an enquiry type (contact | custom_framing |
+        // gifting); Laravel validates it, so an unknown value is rejected there
+        // rather than silently mislabelled here.
+        body: JSON.stringify({ ...body, type: body.type ?? 'contact' }),
       }
     )
 
