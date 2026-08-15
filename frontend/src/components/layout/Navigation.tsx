@@ -82,6 +82,18 @@ export default function Navigation() {
               </svg>
             </button>
 
+            {/* Account */}
+            <Link
+              href="/account"
+              className="w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+              aria-label="Your account"
+            >
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                <circle cx="8.5" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M2.5 15c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </Link>
+
             {/* Cart icon with live count badge */}
             <button
               onClick={openDrawer}

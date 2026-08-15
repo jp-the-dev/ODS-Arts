@@ -11,6 +11,8 @@ import FrameCard from '@/components/product/FrameCard'
 
 interface FrameGridProps {
   products: Product[]
+  /** Passed through to each card — see FrameCard. */
+  linkTo?: 'collection' | 'pdp'
 }
 
 function lowestPrice(p: Product) {
@@ -52,7 +54,7 @@ function applyFilters(products: Product[], filters: ProductFilterParams): Produc
   return list
 }
 
-export default function FrameGrid({ products }: FrameGridProps) {
+export default function FrameGrid({ products, linkTo = 'collection' }: FrameGridProps) {
   const router      = useRouter()
   const pathname    = usePathname()
   const searchParams = useSearchParams()
@@ -219,7 +221,7 @@ export default function FrameGrid({ products }: FrameGridProps) {
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.4, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
               >
-                <FrameCard product={product} priority={i < 3} />
+                <FrameCard product={product} priority={i < 3} linkTo={linkTo} />
               </motion.div>
             ))}
           </AnimatePresence>
