@@ -32,7 +32,11 @@ class TrackingController extends Controller
             return response()->json(['message' => 'Order not found.'], 404);
         }
 
-        if ($order->user_id !== null && $order->user_id !== $request->user()?->id) {
+        // Ask the sanctum guard by name. This route carries no auth middleware,
+        // so the default guard is the session one, which never inspects a bearer
+        // token — $request->user() would be null even for the order's owner, and
+        // every order with an owner would 404 for everybody.
+        if ($order->user_id !== null && $order->user_id !== $request->user('sanctum')?->id) {
             return response()->json(['message' => 'Order not found.'], 404);
         }
 

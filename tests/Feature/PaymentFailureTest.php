@@ -6,15 +6,16 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use Laravel\Sanctum\Sanctum;
 
 /** An order that has started payment, so it has a Razorpay order id to match. */
 function orderAwaitingPayment(array $overrides = []): Order
 {
+    // Owned by whoever is signed in. An ownerless order would pass the ownership
+    // check without ever exercising it, which is how a real customer being
+    // locked out of their own order went unnoticed.
     return Order::factory()->create(array_merge([
-        // Guest by default — the factory otherwise attaches a user, and an order
-        // owned by someone else is deliberately invisible to an unauthenticated
-        // request, which would make these tests pass for the wrong reason.
-        'user_id' => null,
+        'user_id' => auth()->id(),
         'status' => 'pending',
         'payment_status' => 'pending',
         'razorpay_order_id' => 'order_RZP123',
@@ -22,6 +23,7 @@ function orderAwaitingPayment(array $overrides = []): Order
 }
 
 describe('reporting a failed payment', function (): void {
+    beforeEach(fn () => Sanctum::actingAs(User::factory()->create()));
     it('records the failure the browser saw', function (): void {
         // Razorpay reports a decline to the browser only. Without this the order
         // stayed "pending" — indistinguishable from one simply abandoned — and
@@ -96,6 +98,7 @@ describe('reporting a failed payment', function (): void {
 });
 
 describe('tracking a failed order', function (): void {
+    beforeEach(fn () => Sanctum::actingAs(User::factory()->create()));
     it('tells the customer the payment failed rather than showing it as placed', function (): void {
         // status stays "pending" for a failed payment — the order is still
         // recoverable — so payment status is the only thing that distinguishes

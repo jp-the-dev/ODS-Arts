@@ -143,12 +143,17 @@ describe('fulfilment dispatch', function (): void {
     beforeEach(function (): void {
         Queue::fake();
         config()->set('services.razorpay.secret', 'test_secret');
+
+        // /verify is behind the Sanctum guard, and the order has to belong to
+        // whoever is verifying it.
+        $this->payer = User::factory()->create();
+        Sanctum::actingAs($this->payer);
     });
 
     it('books a shipment once payment is verified', function (): void {
         Order::factory()->create([
             'order_number' => 'ODS-PAYOK', 'razorpay_order_id' => 'order_1',
-            'payment_status' => 'pending', 'user_id' => null,
+            'payment_status' => 'pending', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-PAYOK/verify', [
@@ -162,7 +167,7 @@ describe('fulfilment dispatch', function (): void {
     it('does not book a shipment when verification fails', function (): void {
         Order::factory()->create([
             'order_number' => 'ODS-PAYBAD', 'razorpay_order_id' => 'order_2',
-            'payment_status' => 'pending', 'user_id' => null,
+            'payment_status' => 'pending', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-PAYBAD/verify', [

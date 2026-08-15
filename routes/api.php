@@ -76,13 +76,16 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
     // order now belongs to a customer who can sign in and see it.
     Route::post('/orders', [OrderController::class, 'store'])->middleware(['auth:sanctum', 'throttle:orders'])->name('orders.store');
 
-    // Payments carry no auth middleware of their own, but they are not open:
-    // every order now has an owner, and findPayableOrder returns nothing for a
-    // request that is not that owner — so an unauthenticated call 404s. /verify
-    // additionally requires a Razorpay signature that cannot be forged.
-    Route::post('/orders/{orderNumber}/pay', [PaymentController::class, 'pay'])->middleware('throttle:payments')->name('orders.pay');
-    Route::post('/orders/{orderNumber}/verify', [PaymentController::class, 'verify'])->middleware('throttle:payments')->name('orders.verify');
-    Route::post('/orders/{orderNumber}/payment-failed', [PaymentController::class, 'failed'])->middleware('throttle:payments')->name('orders.payment-failed');
+    // Payments need the Sanctum guard on the route, not just an ownership check
+    // inside it. Without it $request->user() falls back to the session guard and
+    // never inspects the bearer token, so it reads as null and every order with
+    // an owner looks like someone else's — the customer gets "order not found"
+    // for their own order, before Razorpay is ever opened.
+    Route::middleware(['auth:sanctum', 'throttle:payments'])->group(function (): void {
+        Route::post('/orders/{orderNumber}/pay', [PaymentController::class, 'pay'])->name('orders.pay');
+        Route::post('/orders/{orderNumber}/verify', [PaymentController::class, 'verify'])->name('orders.verify');
+        Route::post('/orders/{orderNumber}/payment-failed', [PaymentController::class, 'failed'])->name('orders.payment-failed');
+    });
 
     // Order tracking — reference acts as the capability for guest orders
     Route::get('/orders/{orderNumber}/tracking', [TrackingController::class, 'show'])->name('orders.tracking');

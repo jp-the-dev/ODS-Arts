@@ -9,6 +9,13 @@ use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
+    // Paying requires the Sanctum guard on the route, and the order must belong
+    // to whoever is paying. Every order below is owned by this customer: tests
+    // using ownerless orders passed straight through the ownership check and so
+    // never exercised the path a real customer takes.
+    $this->payer = User::factory()->create();
+    Sanctum::actingAs($this->payer);
+
     config()->set('services.razorpay.key', 'rzp_test_key');
     config()->set('services.razorpay.secret', 'test_secret');
     config()->set('services.razorpay.webhook_secret', 'hook_secret');
@@ -23,7 +30,7 @@ function signature(string $razorpayOrderId, string $paymentId, string $secret = 
 describe('POST /orders/{orderNumber}/pay', function (): void {
     it('creates a razorpay order for the exact order total', function (): void {
         Http::fake(['api.razorpay.com/*' => Http::response(['id' => 'order_RZP123'], 200)]);
-        $order = Order::factory()->create(['order_number' => 'ODS-AAA', 'total' => 899900, 'user_id' => null]);
+        $order = Order::factory()->create(['order_number' => 'ODS-AAA', 'total' => 899900, 'user_id' => $this->payer->id]);
 
         $this->postJson('/api/v1/orders/ODS-AAA/pay')
             ->assertOk()
@@ -42,7 +49,7 @@ describe('POST /orders/{orderNumber}/pay', function (): void {
         Http::fake();
         Order::factory()->create([
             'order_number' => 'ODS-BBB', 'total' => 100000,
-            'razorpay_order_id' => 'order_EXISTING', 'user_id' => null,
+            'razorpay_order_id' => 'order_EXISTING', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-BBB/pay')
@@ -57,23 +64,51 @@ describe('POST /orders/{orderNumber}/pay', function (): void {
     });
 
     it('409s when the order is already paid', function (): void {
-        Order::factory()->create(['order_number' => 'ODS-PAID', 'payment_status' => 'paid', 'user_id' => null]);
+        Order::factory()->create(['order_number' => 'ODS-PAID', 'payment_status' => 'paid', 'user_id' => $this->payer->id]);
 
         $this->postJson('/api/v1/orders/ODS-PAID/pay')->assertStatus(409);
     });
 
     it('503s when razorpay credentials are missing', function (): void {
         config()->set('services.razorpay.key', null);
-        Order::factory()->create(['order_number' => 'ODS-CCC', 'user_id' => null]);
+        Order::factory()->create(['order_number' => 'ODS-CCC', 'user_id' => $this->payer->id]);
 
         $this->postJson('/api/v1/orders/ODS-CCC/pay')->assertStatus(503);
     });
 
     it('502s when razorpay rejects the request', function (): void {
         Http::fake(['api.razorpay.com/*' => Http::response(['error' => 'bad'], 400)]);
-        Order::factory()->create(['order_number' => 'ODS-DDD', 'total' => 1000, 'user_id' => null]);
+        Order::factory()->create(['order_number' => 'ODS-DDD', 'total' => 1000, 'user_id' => $this->payer->id]);
 
         $this->postJson('/api/v1/orders/ODS-DDD/pay')->assertStatus(502);
+    });
+
+    it('lets the order owner start payment', function (): void {
+        // The regression this guards: the route had no auth middleware, so
+        // $request->user() read the session guard, never saw the bearer token,
+        // and returned null — making every owned order look like someone
+        // else's. The customer got "order not found" for their own order and
+        // the Razorpay window never opened.
+        Http::fake(['api.razorpay.com/*' => Http::response(['id' => 'order_OWNER'], 200)]);
+
+        Order::factory()->for($this->payer)->create(['order_number' => 'ODS-MINE', 'total' => 500000]);
+
+        $this->postJson('/api/v1/orders/ODS-MINE/pay')
+            ->assertOk()
+            ->assertJsonPath('data.razorpayOrderId', 'order_OWNER');
+    });
+
+    it('401s when nobody is signed in', function (): void {
+        // This is the only test here that can detect the route losing its
+        // auth:sanctum middleware. Sanctum::actingAs authenticates the default
+        // guard directly, so every other test passes with or without it — which
+        // is exactly how the missing guard reached production. Do not remove it.
+        Http::fake();
+        app()['auth']->forgetGuards();
+
+        Order::factory()->create(['order_number' => 'ODS-ANON']);
+
+        $this->postJson('/api/v1/orders/ODS-ANON/pay')->assertUnauthorized();
     });
 
     it('does not let one customer pay another customer order', function (): void {
@@ -91,7 +126,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
     it('marks the order paid when the signature is valid', function (): void {
         $order = Order::factory()->create([
             'order_number' => 'ODS-EEE', 'razorpay_order_id' => 'order_RZP1',
-            'payment_status' => 'pending', 'status' => 'pending', 'user_id' => null,
+            'payment_status' => 'pending', 'status' => 'pending', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-EEE/verify', [
@@ -109,7 +144,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
     it('rejects a forged signature and does not mark the order paid', function (): void {
         $order = Order::factory()->create([
             'order_number' => 'ODS-FFF', 'razorpay_order_id' => 'order_RZP1',
-            'payment_status' => 'pending', 'user_id' => null,
+            'payment_status' => 'pending', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-FFF/verify', [
@@ -122,7 +157,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
 
     it('rejects a signature computed with the wrong secret', function (): void {
         Order::factory()->create([
-            'order_number' => 'ODS-GGG', 'razorpay_order_id' => 'order_RZP1', 'user_id' => null,
+            'order_number' => 'ODS-GGG', 'razorpay_order_id' => 'order_RZP1', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-GGG/verify', [
@@ -136,7 +171,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
         // flip a genuine payment to failed by replaying the endpoint.
         $order = Order::factory()->create([
             'order_number' => 'ODS-SETTLED', 'razorpay_order_id' => 'order_RZP9',
-            'payment_status' => 'paid', 'status' => 'confirmed', 'user_id' => null,
+            'payment_status' => 'paid', 'status' => 'confirmed', 'user_id' => $this->payer->id,
         ]);
 
         $this->postJson('/api/v1/orders/ODS-SETTLED/verify', [
@@ -154,7 +189,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
     it('is idempotent when a valid verify is retried', function (): void {
         Order::factory()->create([
             'order_number' => 'ODS-RETRY', 'razorpay_order_id' => 'order_RZPR',
-            'payment_status' => 'pending', 'user_id' => null,
+            'payment_status' => 'pending', 'user_id' => $this->payer->id,
         ]);
 
         $body = [
@@ -169,7 +204,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
     });
 
     it('422s when payment was never started', function (): void {
-        Order::factory()->create(['order_number' => 'ODS-HHH', 'razorpay_order_id' => null, 'user_id' => null]);
+        Order::factory()->create(['order_number' => 'ODS-HHH', 'razorpay_order_id' => null, 'user_id' => $this->payer->id]);
 
         $this->postJson('/api/v1/orders/ODS-HHH/verify', [
             'razorpay_payment_id' => 'pay_1',
@@ -178,7 +213,7 @@ describe('POST /orders/{orderNumber}/verify', function (): void {
     });
 
     it('requires the payment id and signature', function (): void {
-        Order::factory()->create(['order_number' => 'ODS-III', 'user_id' => null]);
+        Order::factory()->create(['order_number' => 'ODS-III', 'user_id' => $this->payer->id]);
 
         $this->postJson('/api/v1/orders/ODS-III/verify', [])
             ->assertStatus(422)
