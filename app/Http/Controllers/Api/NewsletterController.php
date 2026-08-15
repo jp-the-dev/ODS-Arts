@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Subscriber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class NewsletterController extends Controller
 {
     /**
      * POST /api/v1/newsletter/subscribe — subscribe an email to the newsletter.
      *
-     * Currently stores to a log; can be extended to connect to Mailchimp/Brevo etc.
+     * Idempotent: re-submitting a known address re-activates it rather than
+     * failing on the unique constraint, so the form never errors for a repeat
+     * visitor. Extend here to push to Mailchimp/Brevo.
      */
     public function subscribe(Request $request): JsonResponse
     {
@@ -20,10 +22,14 @@ class NewsletterController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        // Log the subscription — extend to integrate with a mailing service later
-        Log::info('Newsletter subscription', [
-            'email' => $validated['email'],
-        ]);
+        Subscriber::updateOrCreate(
+            ['email' => $validated['email']],
+            [
+                'status' => 'subscribed',
+                'subscribed_at' => now(),
+                'unsubscribed_at' => null,
+            ],
+        );
 
         return response()->json([
             'message' => 'You have been subscribed to our newsletter.',
