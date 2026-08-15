@@ -2,7 +2,7 @@
 
 > **Document Purpose:** The definitive record of the active technology stack for ODSArts and a chronological log of development completed to date — **frontend and backend**. Both stacks now live in one repository and are owned by the same team; see the root `CLAUDE.md` for the working flow.
 >
-> **Status at a glance (Aug 2026):** the platform is feature-complete end to end — browse, product pages, cart, guest or account checkout, Razorpay payment, confirmation email, fulfilment and tracking, with a full Filament admin. All 15 page routes are built and 43 API routes are registered. 5 of 6 data verticals run on Laravel; only custom-framing quotes still use fixtures. Covered by **242 Pest feature tests** and **32 Vitest frontend tests**. What remains before launch is configuration, not code — see §3.2b for accepted limitations.
+> **Status at a glance (Aug 2026):** the platform is feature-complete end to end — browse, product pages, cart, **account checkout** (guest checkout was removed, §3.16), Razorpay payment with failure recording and retry, confirmation email, fulfilment and tracking, with a full Filament admin. All 15 page routes are built and 44 API routes are registered. 5 of 6 data verticals run on Laravel; only custom-framing quotes still use fixtures. Covered by **338 Pest feature tests** and **33 Vitest frontend tests**. What remains before launch is configuration, not code — `DEPLOYMENT.md` is the runbook and `php artisan odsarts:preflight` is the gate. See §3.2b for accepted limitations.
 
 ---
 
@@ -328,9 +328,21 @@ final cleanup — `price_in_paise` is now published alongside the rupee float, a
 - **`getFilteredProducts()` has no callers.** `FrameGrid` filters an in-memory
   array, which is instant at this catalogue size. The server-side filter it would
   call is implemented and tested; wire it up when the catalogue outgrows one fetch.
-- **The Razorpay widget has never run against live keys.** The payment path is
-  proven end to end against a stubbed Razorpay, but the hosted checkout itself
-  needs real test credentials.
+- **The Razorpay widget has run against test keys, not live ones.** Payment,
+  failure and retry are exercised through the hosted test checkout; the live
+  keys and a real captured payment remain untested.
+- **Stock is reserved at checkout, not at payment.** An unpaid order holds its
+  units until `odsarts:release-abandoned-stock` returns them (default 60
+  minutes), so a burst of abandoned carts can briefly show sizes as unavailable.
+  The scheduler cron must be running for this to happen at all — see
+  `DEPLOYMENT.md` §3.6.
+- **Collection hero images and art category covers ship with the frontend
+  build**, not the admin. Changing them is a code deploy. Product images and
+  collection covers are admin-managed (§3.16).
+- **Confirmation-email "Track your order" links now require signing in** for any
+  order with an owner, which is every order placed since §3.16. Relaxing the
+  ownership check in `TrackingController` would restore reference-only access;
+  it is a deliberate open question, not an oversight.
 
 ### 3.4 B1 + B2 — Test Suite & Data Integrity [COMPLETED — Aug 2026]
 
@@ -509,7 +521,7 @@ genuinely served by the API.
 migrations, resources and form requests are all now present, and the routes are
 listed as a commented block at the top of `routes/api.php`.
 
-### 3.9 Orders & Guest Checkout [COMPLETED — Aug 2026]
+### 3.9 Orders & Guest Checkout [COMPLETED — Aug 2026] [guest checkout SUPERSEDED by §3.16]
 
 **Before this, checkout was a simulation.** `placeOrder()` returned a fabricated
 reference after a 1.2s delay and the success screen rendered — nothing was saved,
@@ -767,6 +779,107 @@ cannot book a second shipment.
 
 **Tests: 237 total, 695 assertions.** Frontend builds at 57 pages, new code lint-clean.
 
+### 3.16 Launch Hardening: Images, Money, Payment Failure & Accounts [COMPLETED — Aug 2026]
+
+The catalogue worked; what surrounded it did not. Everything below was found by
+using the app rather than by reading it, and most of it failed silently.
+
+**Images now behave like a CMS.**
+
+1. **Uploads are resized in the browser** before they leave it — products fit
+   1600×2000, collection covers 1920×1080, `contain` so nothing is cropped and
+   upscaling off so a small image is never blown up. A 5MB camera original
+   becomes a few hundred KB of upload, storage and page weight.
+2. **Seeded catalogue images lived in the Next.js public folder**, which renders
+   on the storefront but is invisible to the admin — and the uploader cannot
+   load a file that is not on the disk it writes to, so those images could be
+   looked at but never replaced. `odsarts:images-to-disk` moves them (idempotent,
+   `--dry-run`). Each row gets its own copy so replacing one product's image
+   cannot affect another's.
+3. **The public disk URL is now relative.** Built from `APP_URL` it was a
+   different origin whenever the browser's host differed — localhost and
+   127.0.0.1 are distinct origins — and `/storage` is served off disk without
+   booting Laravel, so no CORS header can rescue it. It surfaced as an opaque
+   "Failed to fetch". `config/cors.php` carries a note explaining why adding
+   `storage/*` there does nothing.
+4. **Next 16 refuses to optimise images from local addresses** (`dangerouslyAllowLocalIP`),
+   an SSRF guard that rejects *before* `remotePatterns` is consulted — so the
+   matching pattern already in the config could never have helped. Its error,
+   `"url" parameter is not allowed`, reads exactly like a pattern typo. Keyed off
+   whether the API host is itself local, so it stays on for any real domain.
+5. **`App\Services\ImageUrl`** — the path→URL rule existed in four places with
+   two behaviours. The art category resource returned the raw column; the
+   collection resource always prefixed `/storage`, which would have produced
+   `/storage//images/x.png`. One rule now.
+6. **`App\Services\StoredImage`** — uploads were never deleted. Replacing a
+   photo left the old file forever, and deleting a product removed its rows via
+   the database cascade, which bypasses the image models' events entirely.
+7. **`App\Services\UploadLimits`** — the forms advertised 5MB while `php.ini`
+   allowed 2MB. PHP rejects an oversized upload before Laravel runs, so the
+   admin saw a generic failure rather than "too large". The limit is now derived
+   from the ini values.
+
+**Money was wrong in two places.** The order confirmation listed line items and
+a total with nothing between them: an order with shipping or GST showed items
+summing to one figure and a total showing another, unreconcilable and with no
+GST line. Separately the admin formatted order items with `->money('INR')` and
+no `divideBy`, so a ₹8,999 frame read as **₹899,900** directly above a total
+reading ₹8,999. `App\Services\Money` now holds the conversion once — re-deriving
+it per call site is how the two came to disagree.
+
+**A refused payment left no trace.** Razorpay reports a decline to the browser
+only, and the frontend resolved it locally without telling the server, so the
+order stayed `payment_status = pending` — identical to one simply abandoned.
+The checkout screen branched only on paid vs not-paid, so a declined card
+produced the same gold tick and "Order Placed" as a success. Now:
+`POST /orders/{ref}/payment-failed` records it (authorised by the
+`razorpay_order_id`, which is not guessable from the reference), tracking exposes
+`paymentStatus`, and the screen has a distinct failed state. The widget also
+closes itself — Razorpay leaves it open — and both the checkout screen and the
+order page offer a retry that reuses the existing Razorpay order.
+
+**Stock was reserved forever.** Checkout decrements at order creation, before
+payment, and nothing gave it back: seven orders were holding eight units.
+`odsarts:release-abandoned-stock` (scheduled every 15 min) returns them after a
+configurable window, cancels the order and stamps `stock_released_at`. Paying
+after a release re-takes the stock and un-cancels the order; retrying a released
+order is refused, because those units may since have been sold.
+
+**Guest checkout removed.** `POST /orders` is behind `auth:sanctum`, the cart
+store refuses to accept items while signed out, and checkout shows a sign-in
+wall. The refusal lives in the store rather than only on the button — there were
+already two entry points (`addItem`, `addArtItem`) — and the store exposes
+`canAdd` so the product page asks it rather than re-deriving the rule.
+**Supersedes §3.9's guest checkout.** Orders placed before the change keep
+`user_id = null` and stay trackable by reference.
+
+**`DEPLOYMENT.md`** — the runbook. Forge/VPS for the API, Vercel for the
+storefront, nothing containerised.
+
+**What this cost in lessons**
+
+- **`Sanctum::actingAs` authenticates the *default* guard.** Removing guest
+  checkout gave every order an owner, and the payment routes had no auth
+  middleware — so `$request->user()` read the session guard, never saw the bearer
+  token, and every customer was locked out of their own order. No ordinary test
+  can detect this: `actingAs` passes with or without the middleware. The single
+  test that catches it calls `forgetGuards()` and asserts 401, and is marked as
+  load-bearing. Tracking had the same fault and now asks for the guard by name.
+- **Tests that use ownerless orders never exercise the ownership check.** Every
+  payment test did. They use owned orders now.
+- **Mutation testing found two guards nothing covered.** The stock release was
+  protected by the command's query, not the service, so either guard could be
+  deleted with the suite still green. The redundant one was removed rather than
+  kept as decoration.
+- **Filament renders relation managers through Livewire**, so a test asserting on
+  the order page HTML passes whether or not the price bug is present. Repeaters
+  render nothing until an item exists, for the same reason.
+- **`phpunit.xml` now sets `memory_limit=512M`.** The suite exceeded PHP's 128M
+  default and died as an out-of-memory fatal inside Whoops that hid the real
+  result entirely.
+
+**Tests: 338 backend / 33 frontend.** Frontend builds; Pint clean.
+
 ### 3.3 Target API contract (frontend expectations)
 
 The frontend calls these when its vertical flag is live. Rows already served are
@@ -918,7 +1031,7 @@ Best done after B3.
 | Filtered products | `NEXT_PUBLIC_USE_MOCK_DATA` | ✅ **Server-side ready** (§3.5). `getFilteredProducts()` maps correctly now, but still has no callers — `FrameGrid` continues to filter an in-memory array. Wire it up in Phase 23 |
 | Art | `NEXT_PUBLIC_ART_API_READY` | ✅ **Live** (§3.8) — 18 products, 6 categories, 360 material variants from Laravel |
 | Search | `NEXT_PUBLIC_SEARCH_API_READY` | ✅ **Live** (§3.13) — frames + art in one call |
-| Orders | `NEXT_PUBLIC_ORDERS_API_READY` | ✅ **Live** (§3.9) — guest checkout, server-side pricing, stock decrement. **No payment yet.** |
+| Orders | `NEXT_PUBLIC_ORDERS_API_READY` | ✅ **Live** (§3.9, §3.16) — **account required, guest checkout removed**. Server-side pricing, stock decrement, Razorpay payment with failure recording and retry |
 | Custom framing quote | `NEXT_PUBLIC_FRAMING_API_READY` | ❌ Mock (F4) |
 | Cart & wishlist | — | ✅ **Synced** (§3.14–3.15) — localStorage first, merged on sign-in. Art wishlisting now supported |
 
