@@ -28,11 +28,11 @@ class OrderItemRelationManager extends RelationManager
                     ->placeholder('—'),
                 TextColumn::make('unit_price_paise')
                     ->label('Unit Price')
-                    ->money('INR'),
+                    ->money('INR', divideBy: 100),
                 TextColumn::make('quantity'),
                 TextColumn::make('subtotal_paise')
                     ->label('Subtotal')
-                    ->money('INR'),
+                    ->money('INR', divideBy: 100),
                 TextColumn::make('options')
                     ->formatStateUsing(fn ($state) => $state ? json_encode($state) : '—'),
             ])

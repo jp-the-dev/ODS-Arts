@@ -23,6 +23,17 @@ class OrderInfolist
                         TextEntry::make('payment_method')->placeholder('—'),
                     ]),
 
+                // Without these the page showed a total that could not be
+                // checked against anything — the same defect as the receipt.
+                Section::make('Amounts')
+                    ->columns(4)
+                    ->schema([
+                        TextEntry::make('subtotal')->money('INR', divideBy: 100),
+                        TextEntry::make('discount')->money('INR', divideBy: 100),
+                        TextEntry::make('shipping_cost')->label('Shipping')->money('INR', divideBy: 100),
+                        TextEntry::make('tax')->label('GST')->money('INR', divideBy: 100),
+                    ]),
+
                 Section::make('Customer')
                     ->columns(3)
                     ->schema([
