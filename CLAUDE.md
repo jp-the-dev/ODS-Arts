@@ -67,6 +67,19 @@ After PHP changes run `vendor/bin/pint --dirty --format agent` and
 `php artisan test --compact`; after frontend changes run `npm run build` in
 `frontend/` with Laravel up.
 
+## Deploying
+
+`DEPLOYMENT.md` is the runbook: Forge/VPS for the API, Vercel for the storefront,
+both from git — nothing is containerised. Read it before changing anything that
+touches environment configuration, image storage, or the queue.
+
+Two traps it exists to prevent: the frontend's `*_API_READY` flags fall back to
+**mock data** when unset, so a forgotten Vercel variable ships a fake checkout;
+and the seeders use `create()`, so `db:seed` run twice duplicates the catalogue.
+
+Run `php artisan odsarts:preflight` after any environment change — it fails on
+anything that would stop a real order going through.
+
 ## Env Files
 
 Both env files are gitignored and do not travel with the repo; recreate them when
