@@ -25,3 +25,10 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# macOS duplicates. Copying a folder in Finder (or some sync tools) creates a
+# sibling named "<name> 2". These have broken the test suite before — duplicate
+# migrations register as "table already exists" — and a stray "public/storage 2"
+# symlink was committed once, so keep them out of the index entirely.
+* [0-9]
+* [0-9].*
