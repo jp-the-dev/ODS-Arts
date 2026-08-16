@@ -64,7 +64,11 @@ class ProductVariantSeeder extends Seeder
     private function seedVariants(Product $product): void
     {
         $base = $product->price_in_paise;
-        $prefix = Str::upper(Str::substr(preg_replace('/[^a-z0-9]/i', '', $product->slug) ?? 'SKU', 0, 8));
+        // Use the whole slug: truncating to 8 characters dropped the size suffix
+        // that distinguishes walnut-classic-810 from walnut-classic-1216, so every
+        // product in a family derived the same prefix and collided on the unique
+        // sku index — updateOrCreate is scoped to one product and cannot see it.
+        $prefix = Str::upper(preg_replace('/[^a-z0-9]/i', '', $product->slug) ?: 'SKU');
 
         foreach (self::SIZES as $index => [$label, $cm, $multiplier, $weight, $stock]) {
             $product->variants()->updateOrCreate(
