@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { apiFetch, ApiError } from '@/lib/api/client'
+import { downloadInvoice } from '@/lib/api/invoice'
 import { authHeaders } from '@/lib/store/auth'
 import { payForOrder } from '@/services/payment.service'
 
@@ -24,6 +25,8 @@ interface Tracking {
   currentStatus: string
   estimatedDelivery?: string | null
   checkpoints: Checkpoint[]
+  /** Present only once the order is paid and its tax invoice has been raised. */
+  invoiceNumber?: string | null
 }
 
 /** The journey every order takes, so progress is legible before any AWB exists. */
@@ -47,6 +50,8 @@ export default function OrderTracking({ orderNumber }: { orderNumber: string }) 
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [payNote, setPayNote] = useState<string | null>(null)
+  const [invoiceBusy, setInvoiceBusy] = useState(false)
+  const [invoiceNote, setInvoiceNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -110,6 +115,21 @@ export default function OrderTracking({ orderNumber }: { orderNumber: string }) 
       await load()
     } finally {
       setPaying(false)
+    }
+  }
+
+  async function handleInvoice() {
+    if (!tracking || invoiceBusy) return
+
+    setInvoiceBusy(true)
+    setInvoiceNote(null)
+
+    try {
+      await downloadInvoice(tracking.orderReference)
+    } catch (err) {
+      setInvoiceNote(err instanceof Error ? err.message : 'The invoice could not be downloaded.')
+    } finally {
+      setInvoiceBusy(false)
     }
   }
 
@@ -179,6 +199,22 @@ export default function OrderTracking({ orderNumber }: { orderNumber: string }) 
             <p className="font-display text-2xl text-obsidian tracking-wider">
               {tracking.orderReference}
             </p>
+
+            {tracking.invoiceNumber && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleInvoice}
+                  disabled={invoiceBusy}
+                  className="font-body text-[11px] uppercase tracking-[0.2em] text-obsidian border-b border-gold/50 pb-0.5 hover:text-gold transition-colors disabled:opacity-50"
+                >
+                  {invoiceBusy ? 'Preparing…' : `Download invoice ${tracking.invoiceNumber}`}
+                </button>
+                {invoiceNote && (
+                  <p className="font-body text-[12px] text-pewter-dark mt-2">{invoiceNote}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="text-right">

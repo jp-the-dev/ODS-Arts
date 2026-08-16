@@ -34,12 +34,13 @@ ODS-Arts/                  ← repo root, Laravel 13 + Filament v4, git lives he
    around it or reporting it as blocked.
 4. **Build features as vertical slices**, in dependency order:
    migration → model + factory → API controller + Eloquent resource →
-   route in `routes/api.php` → Pest feature test → frontend types →
+   route in `backend/routes/api.php` → Pest feature test → frontend types →
    service function → UI. Land it as one commit.
 5. **Follow each stack's own rules.** PHP work obeys the Laravel Boost
-   guidelines in the root `AGENTS.md` (artisan generators, Pint, Pest); frontend
-   work obeys this file. Check `routes/api.php` and sibling controllers for
-   existing convention before adding anything.
+   guidelines in the root `AGENTS.md` (artisan generators, Pint, Pest) and runs
+   from `backend/`; frontend work obeys this file and runs from `frontend/`.
+   Check `backend/routes/api.php` and sibling controllers for existing
+   convention before adding anything.
 
 > **Superseded:** the old `odsarts/` → `rsync` → `temp_repo/` flow and its
 > `sync.sh` script are gone. Ignore any instruction to run a sync script or to
@@ -70,7 +71,7 @@ gitignored, so it does not travel with the repo — recreate it when cloning.
   serves: **products** and **collections**.
 
 The mock layer is scaffolding for endpoints **we have not built yet**, not a
-permanent fixture. These routes are missing from `routes/api.php`, so pointing
+permanent fixture. These routes are missing from `backend/routes/api.php`, so pointing
 them at the API returns 404 and breaks the build; each has its own opt-in,
 defaulting to mock, so the app stays green until its backend lands:
 
