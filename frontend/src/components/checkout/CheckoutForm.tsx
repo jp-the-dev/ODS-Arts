@@ -9,6 +9,7 @@ import { payForOrder, type PaymentOutcome } from '@/services/payment.service'
 import SavedAddressPicker, { type AddressFill } from '@/components/checkout/SavedAddressPicker'
 import { apiFetch } from '@/lib/api/client'
 import { authHeaders, useAuth } from '@/lib/store/auth'
+import type { PlacedOrderSnapshot } from '@/components/checkout/CheckoutPanels'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -93,8 +94,16 @@ const inputClass = (error?: string) =>
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function CheckoutForm() {
-  const { items, subtotalPaise, clearCart } = useCart()
+interface CheckoutFormProps {
+  /**
+   * Called with the basket contents just before the cart is cleared, so the
+   * order summary beside this form can keep showing what was actually bought.
+   */
+  onPlaced?: (snapshot: PlacedOrderSnapshot) => void
+}
+
+export default function CheckoutForm({ onPlaced }: CheckoutFormProps = {}) {
+  const { items, subtotalPaise, totalItems, clearCart } = useCart()
 
   const [form, setForm] = useState<FormData>({
     fullName: '',
@@ -137,9 +146,13 @@ export default function CheckoutForm() {
     []
   )
 
-  // Clear cart and show success when orderRef is set
+  // Clear cart and show success when orderRef is set. Hand the basket to the
+  // summary first — clearing it wipes the only client-side record of what was
+  // bought, and the summary stays on screen beside the confirmation.
   useEffect(() => {
-    if (orderRef) clearCart()
+    if (!orderRef) return
+    onPlaced?.({ items, subtotalPaise, totalItems })
+    clearCart()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderRef])
 

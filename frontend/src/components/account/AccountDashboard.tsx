@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api/client'
+import { downloadInvoice } from '@/lib/api/invoice'
 import { authHeaders, useAuth } from '@/lib/store/auth'
 import { formatPrice } from '@/lib/types/product'
 
@@ -29,6 +30,12 @@ interface OrderItem {
   subtotal?: number
 }
 
+/** Present only once the order is paid — an unpaid order has no invoice. */
+interface OrderInvoice {
+  number: string
+  issued_at: string | null
+}
+
 interface Order {
   id: number
   order_number: string
@@ -37,6 +44,7 @@ interface Order {
   total: number
   ordered_at: string | null
   items?: OrderItem[]
+  invoice?: OrderInvoice | null
 }
 
 export default function AccountDashboard() {
@@ -46,6 +54,21 @@ export default function AccountDashboard() {
   const [addresses, setAddresses] = useState<Address[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [invoicePending, setInvoicePending] = useState<string | null>(null)
+  const [invoiceError, setInvoiceError] = useState<string | null>(null)
+
+  const handleInvoice = useCallback(async (orderNumber: string) => {
+    setInvoicePending(orderNumber)
+    setInvoiceError(null)
+
+    try {
+      await downloadInvoice(orderNumber)
+    } catch (error) {
+      setInvoiceError(error instanceof Error ? error.message : 'The invoice could not be downloaded.')
+    } finally {
+      setInvoicePending(null)
+    }
+  }, [])
 
   // Send signed-out visitors to login, remembering where they wanted to go.
   useEffect(() => {
@@ -130,6 +153,10 @@ export default function AccountDashboard() {
       <section className="mb-16">
         <h2 className="font-display text-[24px] text-obsidian mb-6">Order history</h2>
 
+        {invoiceError && (
+          <p className="font-body text-[12px] text-rose-dark mb-4">{invoiceError}</p>
+        )}
+
         {loadingData ? (
           <p className="font-body text-[13px] text-pewter">Loading orders…</p>
         ) : orders.length === 0 ? (
@@ -163,6 +190,19 @@ export default function AccountDashboard() {
                       : '—'}
                     {order.items?.length ? ` · ${order.items.length} item${order.items.length > 1 ? 's' : ''}` : ''}
                   </p>
+
+                  {order.invoice && (
+                    <button
+                      type="button"
+                      onClick={() => handleInvoice(order.order_number)}
+                      disabled={invoicePending === order.order_number}
+                      className="font-body text-[11px] uppercase tracking-[0.18em] text-obsidian border-b border-gold/50 pb-0.5 mt-2 hover:text-gold transition-colors disabled:opacity-50"
+                    >
+                      {invoicePending === order.order_number
+                        ? 'Preparing…'
+                        : `Invoice ${order.invoice.number}`}
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-6">

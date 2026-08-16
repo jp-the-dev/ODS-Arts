@@ -3,9 +3,26 @@
 import Image from 'next/image'
 import { useCart } from '@/lib/store/cart'
 import { formatPrice } from '@/lib/types/product'
+import type { PlacedOrderSnapshot } from './CheckoutPanels'
 
-export default function CheckoutOrderSummary() {
-  const { items, subtotalPaise, totalItems } = useCart()
+interface Props {
+  /**
+   * What was bought, captured the moment the order was placed.
+   *
+   * Placing an order clears the cart, so reading live cart state here after
+   * checkout succeeds renders "Subtotal (0 items) ₹0" next to a confirmation —
+   * the basket is empty by then. When this is set it is the receipt, and the
+   * live cart is no longer the right source.
+   */
+  placed?: PlacedOrderSnapshot | null
+}
+
+export default function CheckoutOrderSummary({ placed }: Props) {
+  const cart = useCart()
+
+  const items          = placed?.items ?? cart.items
+  const subtotalPaise  = placed?.subtotalPaise ?? cart.subtotalPaise
+  const totalItems     = placed?.totalItems ?? cart.totalItems
 
   return (
     <div className="bg-ivory-200/60 border border-obsidian/8 p-7 flex flex-col gap-5 sticky top-24">

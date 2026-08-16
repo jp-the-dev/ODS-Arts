@@ -1,8 +1,7 @@
 // Checkout — /checkout
 // Server Component shell
 import type { Metadata } from 'next'
-import CheckoutForm from '@/components/checkout/CheckoutForm'
-import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary'
+import CheckoutPanels from '@/components/checkout/CheckoutPanels'
 
 export const metadata: Metadata = {
   title: 'Checkout',
@@ -25,14 +24,9 @@ export default function CheckoutPage() {
           <div className="h-[1px] w-12 bg-gold/50 mt-4" />
         </div>
 
-        {/* Two-column: form left, summary right */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-12 lg:gap-16 items-start">
-          {/* Left — Checkout form */}
-          <CheckoutForm />
-
-          {/* Right — Order summary (sticky) */}
-          <CheckoutOrderSummary />
-        </div>
+        {/* Two-column: form left, summary right. The pair shares the placed-order
+            snapshot, so the grid lives in a client wrapper. */}
+        <CheckoutPanels />
       </div>
     </div>
   )
