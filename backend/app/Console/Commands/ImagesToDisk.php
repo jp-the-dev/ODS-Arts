@@ -32,7 +32,9 @@ class ImagesToDisk extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
         $disk = Storage::disk('public');
-        $sourceRoot = base_path('frontend/public');
+        // The storefront is a sibling of the Laravel app, not a child of it —
+        // base_path() is backend/, so the frontend sits one level up.
+        $sourceRoot = base_path('../frontend/public');
 
         $pending = ProductImage::query()->where('path', 'like', '/%')->get();
 

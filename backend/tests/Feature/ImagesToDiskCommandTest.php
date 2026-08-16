@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 /** Put a real file where the command expects to find the storefront's copy. */
 function storefrontImage(string $path): void
 {
-    $full = base_path('frontend/public').$path;
+    $full = base_path('../frontend/public').$path;
 
     if (! is_dir(dirname($full))) {
         mkdir(dirname($full), 0777, true);
@@ -24,7 +24,7 @@ describe('odsarts:images-to-disk', function (): void {
         storefrontImage('/images/testing/shared.png');
     });
 
-    afterEach(fn () => @unlink(base_path('frontend/public/images/testing/shared.png')));
+    afterEach(fn () => @unlink(base_path('../frontend/public/images/testing/shared.png')));
 
     it('copies the file onto the disk and repoints the row', function (): void {
         $image = ProductImage::factory()->for(Product::factory())->create([

@@ -1,27 +1,32 @@
-@AGENTS.md
+@backend/AGENTS.md
 
 # ODSArts — Repository Guide
 
 ## Layout
 
-One repository holding both stacks. Work directly in it.
+One repository holding both stacks, one per top-level directory. Work directly in it.
 
 ```
-ODS-Arts/              ← repo root; Laravel 13 + Filament v4; git lives here
-├── app/               ← models, Api controllers (Filament admin at /admin)
-├── routes/api.php     ← the storefront API contract — source of truth
-├── database/          ← migrations, factories, seeders
-├── frontend/          ← Next.js 16 + React 19 + Tailwind v4
-│   └── agents/        ← frontend-specific rules, data layer, mock flags
-├── .env               ← Laravel env (gitignored)
-└── frontend/.env.local ← frontend env (gitignored)
+ODS-Arts/                  ← repo root; git lives here; docs only
+├── backend/               ← Laravel 13 + Filament v4
+│   ├── app/               ← models, Api controllers (Filament admin at /admin)
+│   ├── routes/api.php     ← the storefront API contract — source of truth
+│   ├── database/          ← migrations, factories, seeders
+│   ├── .agents/           ← Laravel Boost skills
+│   └── .env               ← Laravel env (gitignored)
+└── frontend/              ← Next.js 16 + React 19 + Tailwind v4
+    ├── agents/            ← frontend-specific rules, data layer, mock flags
+    └── .env.local         ← frontend env (gitignored)
 ```
+
+Every Artisan, Composer and Pint command runs from `backend/`; every npm command
+runs from `frontend/`. The root holds no runnable code — only these docs.
 
 **We own both stacks.** Frontend code lives in `frontend/`, backend code in
-`app/`/`routes/`/`database/`, but they are one codebase and one job — a feature
-is done when it works end to end. If the UI needs an endpoint that does not
-exist, build it rather than mocking around it or calling it blocked. Edit in
-place and commit from the root; a change spanning both stacks is one commit.
+`backend/`, but they are one codebase and one job — a feature is done when it
+works end to end. If the UI needs an endpoint that does not exist, build it
+rather than mocking around it or calling it blocked. Edit in place and commit
+from the root; a change spanning both stacks is one commit.
 
 **Superseded:** the old `odsarts/` → `rsync` → `temp_repo/` sync flow is gone.
 Ignore any instruction to run `sync.sh` or to commit from `temp_repo/`.
@@ -30,17 +35,17 @@ Ignore any instruction to run `sync.sh` or to commit from `temp_repo/`.
 
 | What | Where | Command |
 |---|---|---|
-| Laravel API (`:8000`) | root | `php artisan serve` |
+| Laravel API (`:8000`) | `backend/` | `php artisan serve` |
 | Next.js (`:3000`) | `frontend/` | `npm run dev` |
-| Backend stack (server + queue + logs + vite) | root | `composer run dev` |
-| Tests | root | `php artisan test --compact` |
+| Backend stack (server + queue + logs + vite) | `backend/` | `composer run dev` |
+| Tests | `backend/` | `php artisan test --compact` |
 
 Start Laravel **before** `npm run build` in `frontend/` — the build prerenders
 pages that fetch from the API, so a stopped API surfaces as a build failure.
 
 ## Frontend ↔ Backend Contract
 
-`routes/api.php` is the source of truth for what exists — check it before wiring
+`backend/routes/api.php` is the source of truth for what exists — check it before wiring
 a frontend call, since a missing route returns 404 and breaks the production
 build, not just the page.
 
@@ -55,7 +60,7 @@ Build a feature as one vertical slice, in dependency order:
 
 ```
 migration → model + factory → API controller + Eloquent resource
-  → route in routes/api.php → Pest feature test
+  → route in backend/routes/api.php → Pest feature test
   → frontend types → service function → UI
 ```
 
@@ -64,8 +69,8 @@ Design the Eloquent resource against the existing `frontend/src/lib/types/` and
 Changing one side means changing the other in the same commit.
 
 After PHP changes run `vendor/bin/pint --dirty --format agent` and
-`php artisan test --compact`; after frontend changes run `npm run build` in
-`frontend/` with Laravel up.
+`php artisan test --compact` from `backend/`; after frontend changes run
+`npm run build` in `frontend/` with Laravel up.
 
 ## Deploying
 
