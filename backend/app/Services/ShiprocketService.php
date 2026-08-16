@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * Shiprocket integration, over plain HTTP (no vendor SDK).
@@ -124,6 +125,101 @@ class ShiprocketService
     }
 
     /**
+     * Assign a courier and AWB to a shipment that has already been booked.
+     *
+     * `/orders/create/adhoc` returns an unassigned shipment — no courier, no AWB
+     * — and the AWB is what the status webhook matches on and what tracking
+     * needs. Without this step both are permanently dead.
+     *
+     * Passing no courier lets Shiprocket pick using the account's own rules.
+     *
+     * @return array{awb_code: string|null, courier_id: int|null, courier_name: string|null, dry_run: bool}
+     */
+    public function assignAwb(string|int $shipmentId, ?int $courierId = null): array
+    {
+        if ($this->isDryRun() || ! $this->isConfigured()) {
+            Log::info('Shiprocket assignAwb (dry run)', ['shipment_id' => $shipmentId, 'courier_id' => $courierId]);
+
+            return ['awb_code' => null, 'courier_id' => null, 'courier_name' => null, 'dry_run' => true];
+        }
+
+        $response = $this->client()->post('/courier/assign/awb', array_filter([
+            'shipment_id' => $shipmentId,
+            'courier_id' => $courierId,
+        ], fn ($value) => filled($value)));
+
+        if ($response->failed()) {
+            throw new RuntimeException('Shiprocket AWB assignment failed: '.$response->body());
+        }
+
+        // The useful part is nested under response.data.
+        $data = $response->json('response.data', []) ?? [];
+
+        // Shiprocket reports assignment failures with HTTP 200 and
+        // awb_assign_status = 0 — an empty wallet is the common one. Returning
+        // quietly here would leave the order with no AWB, which silently kills
+        // its webhook and tracking for good, so this has to be loud.
+        if ((int) $response->json('awb_assign_status', 0) !== 1 || blank($data['awb_code'] ?? null)) {
+            throw new RuntimeException('Shiprocket AWB assignment failed: '.(
+                $data['awb_assign_error']
+                    ?? $response->json('message')
+                    ?? $response->body()
+            ));
+        }
+
+        return [
+            'awb_code' => filled($data['awb_code'] ?? null) ? (string) $data['awb_code'] : null,
+            'courier_id' => filled($data['courier_company_id'] ?? null) ? (int) $data['courier_company_id'] : null,
+            'courier_name' => filled($data['courier_name'] ?? null) ? (string) $data['courier_name'] : null,
+            'dry_run' => false,
+        ];
+    }
+
+    /**
+     * Which courier to ask for, honouring `services.shiprocket.courier_mode`.
+     *
+     * Returns null to let Shiprocket choose — which is also what happens if the
+     * rate lookup fails. Picking a courier is an optimisation; refusing to ship
+     * because we could not price the options would be the worse outcome.
+     */
+    public function preferredCourierId(Order $order): ?int
+    {
+        if (config('services.shiprocket.courier_mode') !== 'auto_cheapest') {
+            return null;
+        }
+
+        $pincode = $order->shipping_address['pincode'] ?? null;
+
+        if (blank($pincode)) {
+            return null;
+        }
+
+        try {
+            $rates = $this->rates((string) $pincode, $this->weightKg($order))['rates'];
+        } catch (Throwable $e) {
+            Log::warning('Shiprocket rate lookup failed while choosing a courier', [
+                'order_number' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        $priced = array_values(array_filter(
+            $rates,
+            fn (array $rate): bool => filled($rate['courier_id'] ?? null),
+        ));
+
+        if ($priced === []) {
+            return null;
+        }
+
+        usort($priced, fn (array $a, array $b): int => $a['rate'] <=> $b['rate']);
+
+        return (int) $priced[0]['courier_id'];
+    }
+
+    /**
      * Live tracking for a shipment.
      *
      * @return array<string, mixed>
@@ -189,11 +285,20 @@ class ShiprocketService
     {
         $address = $order->shipping_address ?? [];
 
+        // We store one `full_name`; Shiprocket wants it split, and rejects the
+        // whole order with `billing_last_name: validation.present` if the key is
+        // absent. A single-word name is legitimate, so the surname may be empty
+        // — it only has to be *present*.
+        $parts = preg_split('/\s+/', trim((string) ($address['full_name'] ?? '')), 2) ?: [];
+        $firstName = $parts[0] ?? '';
+        $lastName = $parts[1] ?? '';
+
         return [
             'order_id' => $order->order_number,
             'order_date' => $order->ordered_at?->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
-            'pickup_location' => 'Primary',
-            'billing_customer_name' => $address['full_name'] ?? 'Customer',
+            'pickup_location' => (string) config('services.shiprocket.pickup_location'),
+            'billing_customer_name' => $firstName !== '' ? $firstName : 'Customer',
+            'billing_last_name' => $lastName,
             'billing_address' => $address['line1'] ?? '',
             'billing_address_2' => $address['line2'] ?? '',
             'billing_city' => $address['city'] ?? '',
@@ -216,7 +321,13 @@ class ShiprocketService
             'length' => 40,
             'breadth' => 30,
             'height' => 6,
-            'weight' => max(0.5, $order->items->sum('quantity') * 1.0),
+            'weight' => $this->weightKg($order),
         ];
+    }
+
+    /** Billable weight. One boxed frame per unit, with a floor courers accept. */
+    private function weightKg(Order $order): float
+    {
+        return max(0.5, $order->items->sum('quantity') * 1.0);
     }
 }

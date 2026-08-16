@@ -52,7 +52,8 @@ reputation and order confirmations land in spam.
    - **PHP 8.5** (the app uses 8.5 syntax; 8.4 will not boot)
    - **MySQL 8**
    - Region close to your customers — Mumbai/Bangalore for an Indian storefront
-2. Create a site: `api.odsarts.in`, web directory `/public`
+2. Create a site: `api.odsarts.in`, web directory `/backend/public` — the Laravel
+   app lives in `backend/`, not at the repo root
 3. Install the repository: `jp-the-dev/ODS-Arts`, branch `master`
 4. Enable **Let's Encrypt** SSL for `api.odsarts.in`
 
@@ -138,6 +139,9 @@ Forge → Site → Deploy Script:
 cd /home/forge/api.odsarts.in
 git pull origin $FORGE_SITE_BRANCH
 
+# The repo root holds only docs; everything Artisan touches is one level down.
+cd backend
+
 composer install --no-dev --optimize-autoloader --no-interaction
 
 php artisan migrate --force
@@ -154,7 +158,7 @@ php artisan queue:restart
 Notes:
 
 - **No `npm` step.** The only Blade view using `@vite` is `welcome.blade.php`,
-  and `routes/web.php` redirects `/` to the storefront, so it never renders.
+  and `backend/routes/web.php` redirects `/` to the storefront, so it never renders.
 - **`storage:link --force`** — the plain form prints a red `ERROR: link already
   exists` on every redeploy. It exits 0, but it is noise you will learn to
   ignore, and then you will miss a real error behind it.
@@ -184,7 +188,7 @@ silent from the outside.
 Forge → Server → Scheduler, or add the cron by hand:
 
 ```
-* * * * * cd /home/forge/api.odsarts.in && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /home/forge/api.odsarts.in/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Without it `odsarts:release-abandoned-stock` never runs. Stock is decremented
@@ -230,8 +234,8 @@ It is idempotent and safe to re-run.
 2. **Root Directory: `frontend`** ⚠
 
 That second step is not optional. The repository has two `package-lock.json`
-files — one at the root for Laravel's own Vite assets, one in `frontend/`.
-Vercel defaults to the root and will build the wrong thing.
+files — one in `backend/` for Laravel's own Vite assets, one in `frontend/`.
+Vercel defaults to the repo root, where there is no app at all.
 
 Framework preset auto-detects as Next.js. Leave the build command alone.
 
@@ -291,7 +295,7 @@ Run in order. Every step is verifiable; do not skip to the next on a failure.
 
 ```bash
 # 1. Deploy from Forge, then SSH in
-cd /home/forge/api.odsarts.in
+cd /home/forge/api.odsarts.in/backend
 
 # 2. Catalogue data — collections, products, frame options, testimonials.
 #    ⚠ RUN EXACTLY ONCE. The seeders use create(), not updateOrCreate(), so a
@@ -344,6 +348,14 @@ it the browser is the only confirmation path and a paid order sits as pending.
 **Shiprocket** → Settings → API → Webhooks:
 
 - URL: `https://api.odsarts.in/api/v1/webhooks/shiprocket`
+- Token: the same value as `SHIPROCKET_WEBHOOK_TOKEN`, sent as the `x-api-key`
+  header
+
+The token is not optional. This endpoint moves an order to shipped, delivered,
+cancelled or returned, and a cancellation or RTO returns the units to stock —
+so an unauthenticated push is a way for anyone holding an AWB to vandalise
+fulfilment and inventory. With the token unset the endpoint answers 503 and
+refuses every push, which also means orders never progress past confirmed.
 
 ### 6.2 Remove the test admin
 

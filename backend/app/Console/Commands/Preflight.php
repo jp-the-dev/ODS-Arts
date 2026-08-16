@@ -272,6 +272,18 @@ class Preflight extends Command
                 default => 'live',
             },
         );
+
+        // The status webhook fails closed without this, so shipped and delivered
+        // never reach an order — and a cancellation never returns its stock.
+        $token = config('services.shiprocket.webhook_token');
+
+        $this->record(
+            filled($token) ? 'pass' : ($configured && ! $dryRun ? 'fail' : 'warn'),
+            'Shipping webhook',
+            filled($token)
+                ? 'token present'
+                : 'SHIPROCKET_WEBHOOK_TOKEN unset — status pushes are rejected, so orders never leave confirmed',
+        );
     }
 
     private function record(string $level, string $area, string $detail): void

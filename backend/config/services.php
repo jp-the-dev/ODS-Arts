@@ -50,8 +50,15 @@ return [
         'email' => env('SHIPROCKET_EMAIL'),
         'password' => env('SHIPROCKET_PASSWORD'),
         'pickup_postcode' => env('SHIPROCKET_PICKUP_POSTCODE', '360002'),
+        // Must match the *nickname* of a pickup address in the Shiprocket panel
+        // exactly, or order creation 4xxs. Not every account has one called
+        // "Primary" — ours is "Home".
+        'pickup_location' => env('SHIPROCKET_PICKUP_LOCATION', 'Primary'),
         'courier_mode' => env('SHIPROCKET_COURIER_MODE', 'auto_cheapest'),
         'dry_run' => env('SHIPROCKET_DRY_RUN', true),
+        // Sent by Shiprocket as the x-api-key header. Unset means the status
+        // webhook fails closed (503) rather than accepting anonymous pushes.
+        'webhook_token' => env('SHIPROCKET_WEBHOOK_TOKEN'),
         'base_url' => 'https://apiv2.shiprocket.in/v1/external',
     ],
 

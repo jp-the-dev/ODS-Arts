@@ -34,6 +34,14 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- The suite must never reach Shiprocket. Without these it inherits
+             .env, so real credentials plus SHIPROCKET_DRY_RUN=false made the
+             payment tests book against the live account — only Shiprocket's own
+             validation stopped orders being created. Tests that exercise the
+             live path set these back themselves and fake the HTTP client. -->
+        <env name="SHIPROCKET_DRY_RUN" value="true"/>
+        <env name="SHIPROCKET_EMAIL" value=""/>
+        <env name="SHIPROCKET_PASSWORD" value=""/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

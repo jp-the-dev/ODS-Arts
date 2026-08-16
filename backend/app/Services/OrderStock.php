@@ -44,24 +44,7 @@ final class OrderStock
                 return 0;
             }
 
-            $returned = 0;
-
-            foreach ($fresh->items as $item) {
-                $variant = self::variantFor($item);
-
-                if (! $variant) {
-                    Log::warning('Could not resolve a variant to return stock to', [
-                        'order' => $fresh->order_number,
-                        'item' => $item->id,
-                        'sku' => $item->sku,
-                    ]);
-
-                    continue;
-                }
-
-                $variant->increment('stock_qty', $item->quantity);
-                $returned += $item->quantity;
-            }
+            $returned = self::returnUnits($fresh);
 
             $fresh->update([
                 'stock_released_at' => now(),
@@ -72,6 +55,71 @@ final class OrderStock
 
             return $returned;
         });
+    }
+
+    /**
+     * Give a *paid* order's stock back after it was cancelled or returned.
+     *
+     * `release()` refuses a paid order on purpose — it exists for checkouts that
+     * were never paid for. But a courier cancellation or an RTO is the same
+     * problem arriving from the other end: the units are back on the shelf while
+     * the catalogue still counts them as sold, and nothing here noticed until a
+     * stock count did.
+     *
+     * The status is left to the caller, so an RTO stays 'returned' rather than
+     * being flattened to 'cancelled'.
+     *
+     * @return int units returned, 0 if there was nothing to do
+     */
+    public static function restock(Order $order, string $reason): int
+    {
+        return DB::transaction(function () use ($order, $reason): int {
+            /** @var Order $fresh */
+            $fresh = Order::whereKey($order->getKey())->lockForUpdate()->first();
+
+            // Shiprocket can deliver the same status push more than once, and
+            // stock_released_at is what stops the second one crediting again.
+            if ($fresh->stock_released_at !== null) {
+                return 0;
+            }
+
+            $returned = self::returnUnits($fresh);
+
+            $fresh->update(['stock_released_at' => now()]);
+
+            Log::info('Stock returned for a cancelled or returned order', [
+                'order' => $fresh->order_number,
+                'reason' => $reason,
+                'units' => $returned,
+            ]);
+
+            return $returned;
+        });
+    }
+
+    /** Credit every line back to its variant. Caller owns the transaction. */
+    private static function returnUnits(Order $order): int
+    {
+        $returned = 0;
+
+        foreach ($order->items as $item) {
+            $variant = self::variantFor($item);
+
+            if (! $variant) {
+                Log::warning('Could not resolve a variant to return stock to', [
+                    'order' => $order->order_number,
+                    'item' => $item->id,
+                    'sku' => $item->sku,
+                ]);
+
+                continue;
+            }
+
+            $variant->increment('stock_qty', $item->quantity);
+            $returned += $item->quantity;
+        }
+
+        return $returned;
     }
 
     /**
