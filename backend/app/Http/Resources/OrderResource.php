@@ -30,6 +30,18 @@ class OrderResource extends JsonResource
             'notes' => $this->resource->notes,
             'ordered_at' => $this->resource->ordered_at,
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
+            // Null until the order is paid — the storefront uses its presence to
+            // decide whether to offer the download at all.
+            'invoice' => $this->resource->invoice ? [
+                'number' => $this->resource->invoice->number,
+                'issued_at' => $this->resource->invoice->issued_at,
+                'taxable_value' => $this->resource->invoice->taxable_value,
+                'cgst' => $this->resource->invoice->cgst,
+                'sgst' => $this->resource->invoice->sgst,
+                'igst' => $this->resource->invoice->igst,
+                'gst_rate' => (float) $this->resource->invoice->gst_rate,
+                'is_intra_state' => $this->resource->invoice->is_intra_state,
+            ] : null,
             'created_at' => $this->resource->created_at,
         ];
     }

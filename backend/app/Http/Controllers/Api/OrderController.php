@@ -9,6 +9,7 @@ use App\Mail\OrderConfirmation;
 use App\Models\ArtMaterialVariant;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Services\Gst;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -58,7 +59,13 @@ class OrderController extends Controller
             $resolved[] = $item;
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $resolved, $subtotal): Order {
+        // Catalogue prices include GST, so the line totals already are what the
+        // customer pays. Splitting here rather than adding on top keeps `total`
+        // — and the amount sent to Razorpay — exactly as it was, while giving
+        // the order a real tax figure for the admin and the invoice.
+        $gst = Gst::split($subtotal);
+
+        $order = DB::transaction(function () use ($request, $validated, $resolved, $subtotal, $gst): Order {
             $order = Order::create([
                 'user_id' => $request->user()?->id,
                 'order_number' => $this->generateOrderNumber(),
@@ -66,8 +73,8 @@ class OrderController extends Controller
                 'phone' => $validated['customer']['phone'],
                 'status' => 'pending',
                 'payment_status' => 'pending',
-                'subtotal' => $subtotal,
-                'tax' => 0,
+                'subtotal' => $gst['taxable'],
+                'tax' => $gst['tax'],
                 'shipping_cost' => 0,
                 'discount' => 0,
                 'total' => $subtotal,
@@ -96,7 +103,7 @@ class OrderController extends Controller
             return $order;
         });
 
-        $order->load('items');
+        $order->load(['items', 'invoice']);
 
         // Queued so a slow or failing mail host can never break checkout. The
         // order is already committed at this point; a send failure is logged and
@@ -129,7 +136,7 @@ class OrderController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $orders = $request->user()->orders()
-            ->with('items')
+            ->with(['items', 'invoice'])
             ->latest('ordered_at')
             ->get();
 
@@ -141,7 +148,7 @@ class OrderController extends Controller
     {
         $order = $request->user()->orders()
             ->where('order_number', $orderNumber)
-            ->with('items')
+            ->with(['items', 'invoice'])
             ->first();
 
         if (! $order) {

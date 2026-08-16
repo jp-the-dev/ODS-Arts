@@ -26,7 +26,7 @@ class TrackingController extends Controller
      */
     public function show(Request $request, string $orderNumber): JsonResponse
     {
-        $order = Order::where('order_number', $orderNumber)->first();
+        $order = Order::with('invoice')->where('order_number', $orderNumber)->first();
 
         if (! $order) {
             return response()->json(['message' => 'Order not found.'], 404);
@@ -53,6 +53,7 @@ class TrackingController extends Controller
                     'courierName' => $order->courier_name,
                     'currentStatus' => 'Not yet shipped',
                     'checkpoints' => [],
+                    'invoiceNumber' => $order->invoice?->number,
                 ],
             ]);
         }
@@ -83,6 +84,7 @@ class TrackingController extends Controller
                 'currentStatus' => $tracking['current_status'] ?? 'Unknown',
                 'estimatedDelivery' => $order->estimated_delivery_date?->toDateString(),
                 'checkpoints' => $tracking['checkpoints'] ?? [],
+                'invoiceNumber' => $order->invoice?->number,
             ],
         ]);
     }

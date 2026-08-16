@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateShiprocketOrderJob;
 use App\Models\Order;
+use App\Services\InvoiceIssuer;
 use App\Services\OrderStock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -158,6 +159,10 @@ class PaymentController extends Controller
         // shelf and once in a box being shipped.
         OrderStock::retake($order);
 
+        // The tax invoice is raised on payment, not on order creation — an
+        // unpaid order is not a supply, and the series must have no gaps.
+        InvoiceIssuer::issue($order);
+
         // Book the shipment asynchronously — fulfilment must never delay or fail
         // the customer's payment confirmation.
         CreateShiprocketOrderJob::dispatch($order);
@@ -309,6 +314,7 @@ class PaymentController extends Controller
         }
 
         if ($wasUnpaid) {
+            InvoiceIssuer::issue($order);
             CreateShiprocketOrderJob::dispatch($order);
         }
     }

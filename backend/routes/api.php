@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\EnquiryController;
 use App\Http\Controllers\Api\FrameOptionController;
 use App\Http\Controllers\Api\FramingController;
+use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
@@ -89,6 +90,9 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
 
     // Order tracking — reference acts as the capability for guest orders
     Route::get('/orders/{orderNumber}/tracking', [TrackingController::class, 'show'])->name('orders.tracking');
+
+    // Tax invoice PDF — same access rule as tracking
+    Route::get('/orders/{orderNumber}/invoice', [InvoiceController::class, 'show'])->name('orders.invoice');
 
     // Provider callbacks (signature/AWB verified, no auth)
     Route::post('/webhooks/razorpay', [PaymentController::class, 'webhook'])->middleware('throttle:webhooks')->name('webhooks.razorpay');

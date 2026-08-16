@@ -28,10 +28,26 @@ class OrderInfolist
                 Section::make('Amounts')
                     ->columns(4)
                     ->schema([
-                        TextEntry::make('subtotal')->money('INR', divideBy: 100),
+                        TextEntry::make('subtotal')
+                            ->label('Taxable value')
+                            ->helperText('Prices include GST, so this is the total net of tax.')
+                            ->money('INR', divideBy: 100),
                         TextEntry::make('discount')->money('INR', divideBy: 100),
                         TextEntry::make('shipping_cost')->label('Shipping')->money('INR', divideBy: 100),
                         TextEntry::make('tax')->label('GST')->money('INR', divideBy: 100),
+                    ]),
+
+                // An invoice exists only once the order is paid, so this whole
+                // section stays hidden until then rather than showing blanks.
+                Section::make('Tax invoice')
+                    ->columns(3)
+                    ->visible(fn ($record): bool => $record->invoice !== null)
+                    ->schema([
+                        TextEntry::make('invoice.number')->label('Invoice number')->copyable(),
+                        TextEntry::make('invoice.issued_at')->label('Issued')->dateTime('d M Y, H:i'),
+                        TextEntry::make('invoice.place_of_supply')
+                            ->label('Place of supply')
+                            ->formatStateUsing(fn ($state, $record): string => $state.($record->invoice?->is_intra_state ? ' — CGST + SGST' : ' — IGST')),
                     ]),
 
                 Section::make('Customer')
