@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/store/auth'
+import SocialLoginButton from '@/components/account/SocialLoginButton'
 import { ApiValidationError, ApiError } from '@/lib/api/client'
 
 type Mode = 'login' | 'register'
@@ -137,6 +138,14 @@ export default function AuthForm({ mode, justReset = false }: Props) {
           Your password has been changed. Sign in with the new one.
         </p>
       )}
+
+      <SocialLoginButton next={redirectTarget()} />
+
+      <div className="flex items-center gap-4 my-8">
+        <div className="h-[1px] flex-1 bg-obsidian/10" />
+        <span className="font-body text-[10px] uppercase tracking-[0.25em] text-pewter">or</span>
+        <div className="h-[1px] flex-1 bg-obsidian/10" />
+      </div>
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-7">
         {mode === 'register' && (

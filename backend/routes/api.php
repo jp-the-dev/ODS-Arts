@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\ShippingController;
+use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\WishlistController;
@@ -103,6 +104,12 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
         Route::post('/auth/register', [AuthController::class, 'register'])->name('auth.register');
         Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
         Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password');
+
+        // Social sign-in. The redirect and callback are browser navigations, so
+        // they carry no bearer token; the exchange is what mints one.
+        Route::get('/auth/social/{provider}', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
+        Route::get('/auth/social/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
+        Route::post('/auth/social/exchange', [SocialAuthController::class, 'exchange'])->name('auth.social.exchange');
         Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password');
     });
 

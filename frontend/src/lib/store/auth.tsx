@@ -40,6 +40,12 @@ interface AuthContextValue {
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  /**
+   * Adopt a token obtained outside the email/password flow — currently the one
+   * exchanged for a social sign-in code. Stores it and loads the account, so
+   * the caller does not have to know how either is persisted.
+   */
+  adoptToken: (token: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -180,6 +186,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (current) await loadUser(current)
   }, [loadUser])
 
+  const adoptToken = useCallback(
+    async (next: string) => {
+      persistToken(next)
+      await loadUser(next)
+    },
+    [persistToken, loadUser]
+  )
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -190,8 +204,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       refresh,
+      adoptToken,
     }),
-    [user, token, isLoading, login, register, logout, refresh]
+    [user, token, isLoading, login, register, logout, refresh, adoptToken]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

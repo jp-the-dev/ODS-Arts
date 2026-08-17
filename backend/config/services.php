@@ -46,6 +46,17 @@ return [
         'base_url' => env('RAZORPAY_BASE_URL', 'https://api.razorpay.com/v1'),
     ],
 
+    /*
+    | Google sign-in. The redirect must match the authorised redirect URI in the
+    | Google Cloud console exactly, including scheme and trailing path. Unset
+    | credentials make /auth/social/google answer 503 rather than half-working.
+    */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL', 'http://localhost:8000').'/api/v1/auth/social/google/callback'),
+    ],
+
     'shiprocket' => [
         'email' => env('SHIPROCKET_EMAIL'),
         'password' => env('SHIPROCKET_PASSWORD'),
