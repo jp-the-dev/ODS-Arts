@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 
 describe('POST /auth/register', function (): void {
@@ -176,5 +178,38 @@ describe('POST /auth/forgot-password', function (): void {
         $this->postJson('/api/v1/auth/forgot-password', ['email' => 'not-an-email'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('email');
+    });
+
+    /**
+     * The unknown-email case above never sends a notification, so it never
+     * built the reset mail — which is how a 500 on the real path went unnoticed
+     * until the reset UI was written. Laravel's stock notification links to
+     * `route('password.reset')`, a web route this API does not have.
+     */
+    it('sends a link to a registered address without erroring', function (): void {
+        User::factory()->create(['email' => 'real@example.com']);
+
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => 'real@example.com'])
+            ->assertOk();
+    });
+
+    it('points the reset link at the storefront, not at Laravel', function (): void {
+        config()->set('app.frontend_url', 'https://odsarts.in');
+
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'real@example.com']);
+
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => 'real@example.com'])
+            ->assertOk();
+
+        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): bool {
+            $url = $notification->toMail($user)->actionUrl;
+
+            // The storefront page reads both from the query string.
+            return str_starts_with($url, 'https://odsarts.in/reset-password?')
+                && str_contains($url, 'token=')
+                && str_contains($url, urlencode($user->email));
+        });
     });
 });

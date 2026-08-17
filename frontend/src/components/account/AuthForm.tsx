@@ -29,7 +29,18 @@ const COPY = {
   },
 } as const
 
-export default function AuthForm({ mode }: { mode: Mode }) {
+interface Props {
+  mode: Mode
+  /**
+   * Set when the customer has just completed a password reset, read from the
+   * query string by the page's Server Component. Passed as a prop rather than
+   * read here: useSearchParams() would force this form under Suspense, and an
+   * effect would be a setState cascade.
+   */
+  justReset?: boolean
+}
+
+export default function AuthForm({ mode, justReset = false }: Props) {
   const copy = COPY[mode]
   const router = useRouter()
   const { login, register } = useAuth()
@@ -121,6 +132,12 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         {copy.blurb}
       </p>
 
+      {justReset && (
+        <p className="font-body text-[13px] text-obsidian border border-gold/40 bg-gold/5 px-5 py-4 mb-8">
+          Your password has been changed. Sign in with the new one.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-7">
         {mode === 'register' && (
           <div>
@@ -162,6 +179,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             aria-invalid={Boolean(errors.password)}
           />
           {errors.password && <p className="font-body text-[11px] text-red-700 mt-1.5">{errors.password}</p>}
+
+          {mode === 'login' && (
+            <p className="font-body text-[12px] text-pewter-dark mt-3">
+              <Link href="/forgot-password" className="text-obsidian border-b border-gold/50 pb-0.5">
+                Forgotten your password?
+              </Link>
+            </p>
+          )}
         </div>
 
         {errors.form && <p className="font-body text-[12px] text-red-700">{errors.form}</p>}
