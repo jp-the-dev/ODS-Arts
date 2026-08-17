@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             CollectionSeeder::class,
             ProductVariantSeeder::class,
             FrameOptionSeeder::class,
+            ArtSeeder::class,
             TestimonialSeeder::class,
         ]);
     }
