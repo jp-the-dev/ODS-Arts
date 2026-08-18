@@ -7,7 +7,7 @@ import { useCart } from '@/lib/store/cart'
 import { placeOrder, buildOrderRequest } from '@/services/orders.service'
 import { payForOrder, type PaymentOutcome } from '@/services/payment.service'
 import SavedAddressPicker, { type AddressFill } from '@/components/checkout/SavedAddressPicker'
-import { apiFetch } from '@/lib/api/client'
+import { apiFetch, ApiError, ApiValidationError } from '@/lib/api/client'
 import { authHeaders, useAuth } from '@/lib/store/auth'
 import type { PlacedOrderSnapshot } from '@/components/checkout/CheckoutPanels'
 
@@ -216,10 +216,27 @@ export default function CheckoutForm({ onPlaced }: CheckoutFormProps = {}) {
 
       setPayment(outcome)
       setOrderRef(response.orderReference)
-    } catch {
-      // Surface a user-friendly error — real ApiValidationError handling
-      // can be added here when the backend is live.
-      setErrors({ form: 'Something went wrong. Please try again or contact us.' })
+    } catch (error) {
+      // The server's message is the useful one — "Only 0 left of Walnut Classic
+      // 8x10" tells the customer exactly what to change, where a generic
+      // apology leaves them stuck re-submitting a basket that cannot succeed.
+      // Stock is checked at order time, so a line can go out of stock between
+      // being added to the cart and checkout, and a cart restored from an
+      // earlier session can hold a stale snapshot of it.
+      if (error instanceof ApiValidationError) {
+        setErrors({
+          form: error.message || 'Some items in your basket are no longer available.',
+          // Signals that the basket itself is the problem, so the form can
+          // point at the cart rather than inviting a pointless retry.
+          basket: error.errors.items?.[0] ? 'basket' : '',
+        })
+      } else if (error instanceof ApiError && error.status === 401) {
+        setErrors({ form: 'Your session has expired. Please sign in again to complete your order.' })
+      } else if (error instanceof ApiError && error.status === 429) {
+        setErrors({ form: 'Too many attempts. Please wait a minute and try again.' })
+      } else {
+        setErrors({ form: 'Something went wrong. Please try again or contact us.' })
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -687,6 +704,31 @@ export default function CheckoutForm({ onPlaced }: CheckoutFormProps = {}) {
 
       {/* ── Submit ── */}
       <div className="flex flex-col gap-4 border-t border-obsidian/8 pt-8">
+        {/* Form-level failures were being set but never rendered, so a rejected
+            order showed nothing at all on the page — the customer saw the button
+            finish and the form just sit there. */}
+        {errors.form && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            role="alert"
+            className="border border-rose-dark/40 bg-rose-dark/5 px-5 py-4"
+          >
+            <p className="font-body text-[13px] leading-[1.7] text-obsidian">{errors.form}</p>
+
+            {/* A basket the server rejected cannot be fixed by pressing the
+                button again, so point at the thing that has to change. */}
+            {errors.basket && (
+              <Link
+                href="/cart"
+                className="inline-block font-body text-[11px] uppercase tracking-[0.2em] text-obsidian border-b border-gold/50 pb-0.5 mt-3 hover:text-walnut transition-colors"
+              >
+                Review your basket
+              </Link>
+            )}
+          </motion.div>
+        )}
+
         <motion.button
           type="submit"
           disabled={isSubmitting || items.length === 0}
