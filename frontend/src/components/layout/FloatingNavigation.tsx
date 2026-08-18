@@ -146,7 +146,7 @@ export default function FloatingNavigation() {
               animate={{ y: '0%' }}
               exit={{ y: '100%' }}
               transition={{ duration: 0.8, ease: ANIMATIONS.ease.luxury }}
-              className="relative w-full bg-ivory rounded-t-[2rem] md:rounded-t-[3rem] pt-12 pb-[calc(3rem+env(safe-area-inset-bottom))] px-6 md:px-16 pointer-events-auto flex flex-col items-center shadow-2xl"
+              className="relative w-full bg-ivory rounded-t-[2rem] md:rounded-t-[3rem] pt-10 pb-[calc(2rem+env(safe-area-inset-bottom))] px-6 md:px-16 pointer-events-auto flex flex-col items-center shadow-2xl overflow-y-auto overscroll-contain"
               style={{ maxHeight: '90vh' }}
             >
               {/* Close Button - Increased touch target */}
@@ -166,7 +166,7 @@ export default function FloatingNavigation() {
               </div>
 
               {/* Sequential Menu Links */}
-              <nav className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-md mb-12 overflow-y-auto pb-4 hide-scrollbar">
+              <nav className="flex flex-col items-center gap-1 md:gap-2 w-full max-w-md mb-8">
                 {MENU_ITEMS.map((item, i) => (
                   <motion.div
                     key={item.label}
@@ -178,7 +178,7 @@ export default function FloatingNavigation() {
                     <Link
                       href={item.href}
                       onClick={() => setIsOpen(false)}
-                      className="group relative font-display text-[clamp(32px,4vw,48px)] leading-none text-obsidian tracking-[-0.01em] block py-3 px-6"
+                      className="group relative font-display text-[clamp(24px,3.2vw,38px)] leading-none text-obsidian tracking-[-0.01em] block py-2 px-6"
                     >
                       <span className="relative z-10">{item.label}</span>
                       <span className="absolute left-1/2 -translate-x-1/2 bottom-1 w-0 h-[1px] bg-walnut transition-all duration-500 group-hover:w-[calc(100%-3rem)]" />
