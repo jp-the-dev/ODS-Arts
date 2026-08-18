@@ -20,6 +20,9 @@ use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\WishlistController;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -107,8 +110,20 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
 
         // Social sign-in. The redirect and callback are browser navigations, so
         // they carry no bearer token; the exchange is what mints one.
-        Route::get('/auth/social/{provider}', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
-        Route::get('/auth/social/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
+        //
+        // These two need a session, which API routes do not have by default:
+        // Socialite puts the OAuth `state` value there and checks it on the way
+        // back. Dropping to ->stateless() would be simpler and is what most
+        // API-only setups do, but `state` is the defence against login-CSRF —
+        // an attacker walking a customer into signing in as *them*. Both are
+        // top-level GET navigations, so a SameSite=Lax cookie survives the
+        // round trip through Google.
+        Route::middleware([EncryptCookies::class, AddQueuedCookiesToResponse::class, StartSession::class])
+            ->group(function (): void {
+                Route::get('/auth/social/{provider}', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
+                Route::get('/auth/social/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
+            });
+
         Route::post('/auth/social/exchange', [SocialAuthController::class, 'exchange'])->name('auth.social.exchange');
         Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password');
     });

@@ -54,7 +54,11 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL', 'http://localhost:8000').'/api/v1/auth/social/google/callback'),
+        // `?:` not env()'s second argument: the key exists but is blank in
+        // .env, and env() returns that empty string rather than the default,
+        // which sent Google an empty redirect_uri.
+        'redirect' => env('GOOGLE_REDIRECT_URI')
+            ?: rtrim((string) env('APP_URL', 'http://localhost:8000'), '/').'/api/v1/auth/social/google/callback',
     ],
 
     'shiprocket' => [
