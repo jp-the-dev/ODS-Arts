@@ -9,6 +9,7 @@ import MobileMenuButton from '@/components/motion/MobileMenuButton'
 import Container from '@/components/layout/Container'
 import SearchDrawer from '@/components/layout/SearchDrawer'
 import { useCart } from '@/lib/store/cart'
+import { useAuth } from '@/lib/store/auth'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -16,6 +17,7 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const { totalItems, openDrawer } = useCart()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setIsScrolled(latest > 50)
@@ -82,17 +84,42 @@ export default function Navigation() {
               </svg>
             </button>
 
-            {/* Account */}
+            {/* Wishlist — the page existed but nothing linked to it. */}
             <Link
-              href="/account"
-              className="w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
-              aria-label="Your account"
+              href="/wishlist"
+              className="w-9 h-9 hidden sm:flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+              aria-label="Your wishlist"
             >
               <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-                <circle cx="8.5" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4"/>
-                <path d="M2.5 15c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M8.5 14.5S2 10.8 2 6.6A3.6 3.6 0 0 1 8.5 4.5 3.6 3.6 0 0 1 15 6.6c0 4.2-6.5 7.9-6.5 7.9Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
               </svg>
             </Link>
+
+            {/* Account. The icon alone was identical whether signed in or out,
+                so a signed-out visitor had no visible prompt to sign in and no
+                way to tell which state they were in. Nothing renders until the
+                stored token has been checked, to avoid a signed-out flash. */}
+            {authLoading ? (
+              <span className="w-9 h-9" aria-hidden="true" />
+            ) : isAuthenticated ? (
+              <Link
+                href="/account"
+                className="w-9 h-9 flex items-center justify-center text-obsidian/60 hover:text-obsidian transition-colors focus:outline-none"
+                aria-label="Your account"
+              >
+                <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                  <circle cx="8.5" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4"/>
+                  <path d="M2.5 15c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+              </Link>
+            ) : (
+              <Link
+                href={`/login?next=${encodeURIComponent(pathname || '/')}`}
+                className="font-body text-[11px] uppercase tracking-[0.18em] text-obsidian/70 hover:text-obsidian transition-colors whitespace-nowrap px-1"
+              >
+                Sign in
+              </Link>
+            )}
 
             {/* Cart icon with live count badge */}
             <button

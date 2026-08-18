@@ -2,16 +2,19 @@
 
 import { useState, useEffect, useLayoutEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ANIMATIONS } from '@/lib/config/animations'
+import { useAuth } from '@/lib/store/auth'
 
 const MENU_ITEMS = [
   { label: 'Collections', href: '/collections' },
   { label: 'Art', href: '/art' },
-  { label: 'Custom Framing', href: '/custom' },
+  // Was '/custom', which has no page and 404'd.
+  { label: 'Custom Framing', href: '/custom-framing' },
+  { label: 'Gifting', href: '/gifting' },
   { label: 'Inspiration', href: '/inspiration' },
   { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
 ]
 
 const FOOTER_LINKS = [
@@ -22,6 +25,17 @@ const FOOTER_LINKS = [
 
 export default function FloatingNavigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const { isAuthenticated, isLoading, user, logout } = useAuth()
+  const pathname = usePathname()
+
+  /**
+   * Signing in returns you to the page you were on, not to a generic landing.
+   * Auth pages themselves are excluded — bouncing back to /login after signing
+   * in would be a loop.
+   */
+  const signInHref = pathname && !pathname.startsWith('/login') && !pathname.startsWith('/register')
+    ? `/login?next=${encodeURIComponent(pathname)}`
+    : '/login'
 
   // Set initial hidden state synchronously before first paint.
   // This runs client-side only ('use client'), so no SSR conflict.
@@ -173,12 +187,76 @@ export default function FloatingNavigation() {
                 ))}
               </nav>
 
+              {/* Account — the homepage has no other navigation, so without
+                  this there is no way to reach an account or sign in from it. */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, delay: 0.45, ease: ANIMATIONS.ease.luxury }}
+                className="w-full max-w-md flex flex-col items-center gap-4 border-t border-gold/20 pt-8 mb-8"
+              >
+                {/* Nothing is rendered until the stored token has been checked,
+                    so the menu never flashes "Sign in" at a signed-in customer. */}
+                {isLoading ? null : isAuthenticated ? (
+                  <>
+                    <span className="font-body text-[10px] uppercase tracking-[0.3em] text-pewter">
+                      {user?.name ? `Signed in as ${user.name}` : 'Your account'}
+                    </span>
+
+                    <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+                      <Link
+                        href="/account"
+                        onClick={() => setIsOpen(false)}
+                        className="font-body text-[12px] uppercase tracking-[0.2em] text-obsidian border-b border-gold/50 pb-1 hover:text-walnut transition-colors"
+                      >
+                        Account &amp; orders
+                      </Link>
+                      <Link
+                        href="/wishlist"
+                        onClick={() => setIsOpen(false)}
+                        className="font-body text-[12px] uppercase tracking-[0.2em] text-obsidian border-b border-gold/50 pb-1 hover:text-walnut transition-colors"
+                      >
+                        Wishlist
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOpen(false)
+                          void logout()
+                        }}
+                        className="font-body text-[12px] uppercase tracking-[0.2em] text-pewter hover:text-obsidian transition-colors"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+                    <Link
+                      href={signInHref}
+                      onClick={() => setIsOpen(false)}
+                      className="font-body text-[12px] uppercase tracking-[0.2em] text-obsidian border-b border-gold/50 pb-1 hover:text-walnut transition-colors"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setIsOpen(false)}
+                      className="font-body text-[12px] uppercase tracking-[0.2em] text-pewter hover:text-obsidian transition-colors"
+                    >
+                      Create account
+                    </Link>
+                  </div>
+                )}
+              </motion.div>
+
               {/* Footer Links */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
+                transition={{ duration: 0.6, delay: 0.55 }}
                 className="w-full flex items-center justify-center gap-6 border-t border-gold/20 pt-8"
               >
                 {FOOTER_LINKS.map((link) => (

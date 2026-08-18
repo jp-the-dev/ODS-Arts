@@ -2,7 +2,9 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { BRAND, NAV_LINKS } from '@/constants'
+import { useAuth } from '@/lib/store/auth'
 
 export default function MobileMenuOverlay({
   isOpen,
@@ -11,6 +13,13 @@ export default function MobileMenuOverlay({
   isOpen: boolean
   onClose: () => void
 }) {
+  const { isAuthenticated, isLoading, user, logout } = useAuth()
+  const pathname = usePathname()
+
+  const signInHref = pathname && !pathname.startsWith('/login') && !pathname.startsWith('/register')
+    ? `/login?next=${encodeURIComponent(pathname)}`
+    : '/login'
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -32,6 +41,47 @@ export default function MobileMenuOverlay({
                 {link.label}
               </Link>
             ))}
+          </div>
+
+          {/* Account. Absent entirely before, so on a phone there was no way
+              to sign in, reach orders, or open the wishlist. */}
+          <div className="border-t border-ivory/15 pt-6 pb-8">
+            {isLoading ? null : isAuthenticated ? (
+              <div className="flex flex-col gap-4">
+                {user?.name && (
+                  <span className="font-body text-[10px] uppercase tracking-[0.3em] text-pewter">
+                    Signed in as {user.name}
+                  </span>
+                )}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <Link href="/account" onClick={onClose} className="font-body text-[13px] uppercase tracking-[0.18em] text-ivory hover:text-gold transition-colors">
+                    Account &amp; orders
+                  </Link>
+                  <Link href="/wishlist" onClick={onClose} className="font-body text-[13px] uppercase tracking-[0.18em] text-ivory hover:text-gold transition-colors">
+                    Wishlist
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose()
+                      void logout()
+                    }}
+                    className="font-body text-[13px] uppercase tracking-[0.18em] text-pewter hover:text-ivory transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                <Link href={signInHref} onClick={onClose} className="font-body text-[13px] uppercase tracking-[0.18em] text-ivory hover:text-gold transition-colors">
+                  Sign in
+                </Link>
+                <Link href="/register" onClick={onClose} className="font-body text-[13px] uppercase tracking-[0.18em] text-pewter hover:text-ivory transition-colors">
+                  Create account
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="mt-auto">
