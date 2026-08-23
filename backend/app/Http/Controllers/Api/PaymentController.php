@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateShiprocketOrderJob;
+use App\Mail\PaymentConfirmed;
 use App\Models\Order;
 use App\Services\InvoiceIssuer;
 use App\Services\OrderStock;
@@ -11,6 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
  * Razorpay payments.
@@ -162,6 +165,8 @@ class PaymentController extends Controller
         // The tax invoice is raised on payment, not on order creation — an
         // unpaid order is not a supply, and the series must have no gaps.
         InvoiceIssuer::issue($order);
+
+        $this->sendPaymentReceipt($order);
 
         // Book the shipment asynchronously — fulfilment must never delay or fail
         // the customer's payment confirmation.
@@ -315,7 +320,44 @@ class PaymentController extends Controller
 
         if ($wasUnpaid) {
             InvoiceIssuer::issue($order);
+            $this->sendPaymentReceipt($order);
             CreateShiprocketOrderJob::dispatch($order);
+        }
+    }
+
+    /**
+     * Queue the receipt for a payment that has just landed.
+     *
+     * Called from both settlement paths — the browser's /verify and the webhook
+     * — but each guards on the unpaid→paid transition, so whichever arrives
+     * first sends and the other no-ops. The customer gets exactly one.
+     *
+     * The invoice relation is reloaded rather than trusted: InvoiceIssuer::issue()
+     * has only just created it, and a relation resolved before that point would
+     * still be cached as null, silently dropping the PDF attachment.
+     */
+    private function sendPaymentReceipt(Order $order): void
+    {
+        $recipient = $order->notificationEmail();
+
+        if (! $recipient) {
+            Log::warning('Paid order has no email to send a receipt to', ['order' => $order->order_number]);
+
+            return;
+        }
+
+        $order->load('invoice');
+
+        // The money has already arrived and the invoice is raised. A mail
+        // failure here must never turn a settled payment into a 500 for the
+        // browser, which would show the customer a failed checkout.
+        try {
+            Mail::to($recipient)->queue(new PaymentConfirmed($order));
+        } catch (Throwable $e) {
+            Log::error('Failed to queue payment receipt', [
+                'order' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

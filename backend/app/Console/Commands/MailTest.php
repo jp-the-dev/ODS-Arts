@@ -2,10 +2,16 @@
 
 namespace App\Console\Commands;
 
+use App\Mail\OrderCancelled;
 use App\Mail\OrderConfirmation;
+use App\Mail\OrderDelivered;
+use App\Mail\OrderReturned;
+use App\Mail\OrderShipped;
+use App\Mail\PaymentConfirmed;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Console\Command;
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -21,9 +27,24 @@ class MailTest extends Command
 {
     protected $signature = 'odsarts:mail-test
                             {email : Where to send the test}
-                            {--queue : Dispatch through the queue, as checkout does}';
+                            {--queue : Dispatch through the queue, as checkout does}
+                            {--type=confirmation : Which mail to send, or "all" for every one}';
 
-    protected $description = 'Send a real order confirmation to verify mail delivery';
+    protected $description = 'Send a real order mail to verify mail delivery';
+
+    /**
+     * Every customer-facing mail, keyed by the --type value that selects it.
+     *
+     * @var array<string, class-string<Mailable>>
+     */
+    private const TYPES = [
+        'confirmation' => OrderConfirmation::class,
+        'paid' => PaymentConfirmed::class,
+        'shipped' => OrderShipped::class,
+        'delivered' => OrderDelivered::class,
+        'cancelled' => OrderCancelled::class,
+        'returned' => OrderReturned::class,
+    ];
 
     public function handle(): int
     {
@@ -46,6 +67,17 @@ class MailTest extends Command
             $this->newLine();
         }
 
+        $type = (string) $this->option('type');
+
+        if ($type !== 'all' && ! isset(self::TYPES[$type])) {
+            $this->error("Unknown --type '{$type}'. Choose one of: ".implode(', ', array_keys(self::TYPES)).', or all.');
+
+            return self::FAILURE;
+        }
+
+        /** @var array<string, class-string<Mailable>> $sending */
+        $sending = $type === 'all' ? self::TYPES : [$type => self::TYPES[$type]];
+
         $order = $this->sampleOrder();
 
         if (! $order) {
@@ -58,25 +90,38 @@ class MailTest extends Command
         $this->line('  From:    '.config('mail.from.address'));
         $this->line("  To:      {$to}");
         $this->line('  Order:   '.$order->order_number);
+        $this->line('  Sending: '.implode(', ', array_keys($sending)));
         $this->newLine();
 
-        try {
-            if ($this->option('queue')) {
-                Mail::to($to)->queue(new OrderConfirmation($order));
+        foreach ($sending as $name => $mailable) {
+            try {
+                if ($this->option('queue')) {
+                    Mail::to($to)->queue(new $mailable($order));
 
-                $this->info('  Queued. Run a worker to send it: php artisan queue:work --once');
-                $this->line('  <fg=gray>This is the path checkout uses, so it also proves the worker.</>');
+                    $this->line("  <fg=green>queued</>  {$name}");
 
-                return self::SUCCESS;
+                    continue;
+                }
+
+                Mail::to($to)->send(new $mailable($order));
+
+                $this->line("  <fg=green>sent</>    {$name}");
+            } catch (Throwable $e) {
+                $this->newLine();
+                $this->error("  {$name} failed: ".$e->getMessage());
+                $this->line('  <fg=gray>Check MAIL_HOST, MAIL_PORT, MAIL_USERNAME and MAIL_PASSWORD.</>');
+
+                return self::FAILURE;
             }
+        }
 
-            Mail::to($to)->send(new OrderConfirmation($order));
-        } catch (Throwable $e) {
-            $this->newLine();
-            $this->error('  Delivery failed: '.$e->getMessage());
-            $this->line('  <fg=gray>Check MAIL_HOST, MAIL_PORT, MAIL_USERNAME and MAIL_PASSWORD.</>');
+        $this->newLine();
 
-            return self::FAILURE;
+        if ($this->option('queue')) {
+            $this->info('  Queued. Run a worker to send: php artisan queue:work --once');
+            $this->line('  <fg=gray>This is the path checkout uses, so it also proves the worker.</>');
+
+            return self::SUCCESS;
         }
 
         $this->info('  Sent without error.');

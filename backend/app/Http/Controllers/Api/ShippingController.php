@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderCancelled;
+use App\Mail\OrderDelivered;
+use App\Mail\OrderReturned;
+use App\Mail\OrderShipped;
 use App\Models\Order;
 use App\Services\OrderStock;
 use App\Services\ShiprocketService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class ShippingController extends Controller
@@ -99,6 +104,12 @@ class ShippingController extends Controller
 
         $mapped = $this->mapStatus($status);
 
+        // Captured before the write: Shiprocket pushes 'shipped', 'in transit'
+        // and 'out for delivery', which all map onto 'shipped'. Mailing on the
+        // push rather than on the transition would send the same "on its way"
+        // email three times for one parcel.
+        $isTransition = $mapped !== null && $order->status !== $mapped;
+
         $order->update(array_filter([
             'shiprocket_status' => $status ?: null,
             'status' => $mapped,
@@ -111,7 +122,46 @@ class ShippingController extends Controller
             OrderStock::restock($order, $mapped);
         }
 
+        if ($isTransition) {
+            $this->notifyCustomer($order, $mapped);
+        }
+
         return response()->json(['message' => 'Handled.']);
+    }
+
+    /**
+     * Tell the customer their parcel moved.
+     *
+     * Delivery is best-effort: the webhook has already committed the status and
+     * returned stock, and Shiprocket retries anything that is not a 2xx. Letting
+     * a mail failure bubble would replay those side effects on every retry, so
+     * it is logged and swallowed instead.
+     */
+    private function notifyCustomer(Order $order, string $status): void
+    {
+        $mailable = match ($status) {
+            'shipped' => new OrderShipped($order),
+            'delivered' => new OrderDelivered($order),
+            'cancelled' => new OrderCancelled($order),
+            'returned' => new OrderReturned($order),
+            default => null,
+        };
+
+        $recipient = $order->notificationEmail();
+
+        if (! $mailable || ! $recipient) {
+            return;
+        }
+
+        try {
+            Mail::to($recipient)->queue($mailable);
+        } catch (Throwable $e) {
+            Log::error('Failed to queue shipping status mail', [
+                'order' => $order->order_number,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** Translate Shiprocket's vocabulary into our own order statuses. */

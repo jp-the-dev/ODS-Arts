@@ -73,4 +73,20 @@ class Order extends Model
     {
         return $this->hasOne(Invoice::class);
     }
+
+    /**
+     * Where to send this order's mail, or null if there is nowhere to send it.
+     *
+     * `email` is nullable and only guaranteed on a guest checkout — an order
+     * placed by a signed-in customer can carry none at all, taking its contact
+     * point from the account instead. Passing that null straight to Mail::to()
+     * throws ("An email must have a To header"), which on the payment path
+     * meant a settled payment answering 500 to the browser.
+     */
+    public function notificationEmail(): ?string
+    {
+        $email = $this->email ?: $this->user?->email;
+
+        return filter_var((string) $email, FILTER_VALIDATE_EMAIL) ? $email : null;
+    }
 }
