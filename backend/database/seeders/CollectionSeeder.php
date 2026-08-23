@@ -6,7 +6,6 @@ namespace Database\Seeders;
 
 use App\Models\Collection;
 use App\Models\Product;
-use App\Models\ProductImage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -124,9 +123,8 @@ class CollectionSeeder extends Seeder
             $collectionSlug = $collectionData['slug'];
 
             /** @var Collection $collection */
-            $collection = Collection::create([
+            $collection = Collection::updateOrCreate(['slug' => $collectionSlug], [
                 'name' => $collectionData['name'],
-                'slug' => $collectionSlug,
                 'display_number' => $collectionData['display_number'],
                 'tagline' => $collectionData['tagline'],
                 'eyebrow' => $collectionData['eyebrow'],
@@ -134,7 +132,9 @@ class CollectionSeeder extends Seeder
                 'long_description' => $collectionData['long_description'],
                 'materials' => $collectionData['materials'],
                 'features' => $collectionData['features'],
-                'cover_image' => null,
+                // cover_image is deliberately absent: it is nullable, so a fresh
+                // row still gets NULL, but a re-run must not wipe a cover an
+                // admin uploaded through Filament (which would delete the file).
                 'image_path' => $collectionData['image_path'],
                 'image_alt' => $collectionData['image_alt'],
                 'image_position' => $collectionData['image_position'],
@@ -147,11 +147,10 @@ class CollectionSeeder extends Seeder
 
             foreach ($collectionData['products'] as $productOrder => $productData) {
                 /** @var Product $product */
-                $product = Product::create([
+                $product = Product::updateOrCreate(['slug' => Str::slug($productData['name'])], [
                     'collection_id' => $collection->id,
                     'name' => $productData['name'],
                     'tagline' => $productData['tagline'],
-                    'slug' => Str::slug($productData['name']),
                     'description' => 'Hand-crafted in our studio. '.$collectionData['description'],
                     'delivery_days' => $collectionSlug === 'heritage' ? 21 : ($collectionSlug === 'gallery' ? 10 : 14),
                     'care_instructions' => $careInstructions,
@@ -164,30 +163,20 @@ class CollectionSeeder extends Seeder
                     'sort_order' => ($productOrder + 1) * 10,
                 ]);
 
-                // Seed hero image (collection hero)
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'path' => $collectionData['image_path'],
-                    'alt' => $collectionData['image_alt'].' — front view',
-                    'sort_order' => 1,
-                ]);
-
-                // Seed a workshop/detail image
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'path' => '/images/craft/workshop.png',
-                    'alt' => 'Crafting the '.$productData['name'].' in our studio',
-                    'sort_order' => 2,
-                ]);
-
-                // Seed one lifestyle image (rotate through the 3 available)
+                // Hero, workshop detail, then one lifestyle shot rotated through
+                // the three available. Keyed on sort_order so a re-run repoints
+                // the same three rows instead of stacking up duplicates.
                 $lifestyle = self::$lifestyleImages[$productOrder % count(self::$lifestyleImages)];
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'path' => $lifestyle['path'],
-                    'alt' => $lifestyle['alt'],
-                    'sort_order' => 3,
-                ]);
+
+                $images = [
+                    1 => ['path' => $collectionData['image_path'], 'alt' => $collectionData['image_alt'].' — front view'],
+                    2 => ['path' => '/images/craft/workshop.png', 'alt' => 'Crafting the '.$productData['name'].' in our studio'],
+                    3 => ['path' => $lifestyle['path'], 'alt' => $lifestyle['alt']],
+                ];
+
+                foreach ($images as $imageOrder => $image) {
+                    $product->images()->updateOrCreate(['sort_order' => $imageOrder], $image);
+                }
             }
         }
     }

@@ -47,14 +47,21 @@ class TestimonialSeeder extends Seeder
 
     public function run(): void
     {
+        // Testimonials carry no unique column, so a bare create() would silently
+        // stack another six copies on every re-run rather than failing loudly.
+        // Author plus city is the natural key here — one quote per person.
         foreach (self::$testimonials as $testimonialData) {
-            Testimonial::create([
-                'product_id' => null,
-                'quote' => $testimonialData['quote'],
-                'author' => $testimonialData['author'],
-                'city' => $testimonialData['city'],
-                'is_active' => true,
-            ]);
+            Testimonial::updateOrCreate(
+                [
+                    'author' => $testimonialData['author'],
+                    'city' => $testimonialData['city'],
+                ],
+                [
+                    'product_id' => null,
+                    'quote' => $testimonialData['quote'],
+                    'is_active' => true,
+                ],
+            );
         }
     }
 }

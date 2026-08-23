@@ -39,10 +39,9 @@ class FrameOptionSeeder extends Seeder
     {
         foreach (self::$options as $type => $options) {
             foreach ($options as $sortOrder => $option) {
-                FrameOption::create([
+                FrameOption::updateOrCreate(['slug' => Str::slug($option['name'])], [
                     'type' => $type,
                     'name' => $option['name'],
-                    'slug' => Str::slug($option['name']),
                     'material' => $option['material'],
                     'finish' => $option['finish'],
                     'price_modifier_in_paise' => $option['price_modifier'],
