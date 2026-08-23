@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\ArtMaterialVariant;
 use App\Models\Order;
+use App\Models\OrderItem;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +27,23 @@ class ShiprocketService
 
     /** Shiprocket tokens last 10 days; refreshed well before that. */
     private const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
+
+    /** Couriers derive volumetric weight as (L x B x H) / 5000 for domestic air/surface. */
+    private const VOLUMETRIC_DIVISOR = 5000;
+
+    /** Padding added to the largest item's face so the box is not undersized. */
+    private const PACKING_MARGIN_CM = 4.0;
+
+    /** Depth of a single boxed frame, and of each additional one stacked on it. */
+    private const BOX_DEPTH_CM = 5.0;
+
+    private const STACK_DEPTH_CM = 2.0;
+
+    /** Used when a line records no variant weight at all. */
+    private const FALLBACK_ITEM_GRAMS = 1000;
+
+    /** Shiprocket rejects anything lighter. */
+    private const MIN_BILLABLE_KG = 0.5;
 
     public function isDryRun(): bool
     {
@@ -195,7 +214,7 @@ class ShiprocketService
         }
 
         try {
-            $rates = $this->rates((string) $pincode, $this->weightKg($order))['rates'];
+            $rates = $this->rates((string) $pincode, $this->billableWeightKg($order))['rates'];
         } catch (Throwable $e) {
             Log::warning('Shiprocket rate lookup failed while choosing a courier', [
                 'order_number' => $order->order_number,
@@ -283,6 +302,8 @@ class ShiprocketService
     /** @return array<string, mixed> */
     private function orderPayload(Order $order): array
     {
+        $parcel = $this->parcel($order);
+
         $address = $order->shipping_address ?? [];
 
         // We store one `full_name`; Shiprocket wants it split, and rejects the
@@ -317,17 +338,126 @@ class ShiprocketService
             ])->all(),
             'payment_method' => 'Prepaid',
             'sub_total' => $order->total / 100,
-            // Dimensions are per-parcel; a single boxed frame is the default.
-            'length' => 40,
-            'breadth' => 30,
-            'height' => 6,
-            'weight' => $this->weightKg($order),
+            // Declared parcel, derived from the contents rather than assumed —
+            // the weight below is volumetric-aware and must match these dims.
+            'length' => $parcel['length'],
+            'breadth' => $parcel['breadth'],
+            'height' => $parcel['height'],
+            'weight' => $this->billableWeightKg($order),
         ];
     }
 
     /** Billable weight. One boxed frame per unit, with a floor courers accept. */
-    private function weightKg(Order $order): float
+    /**
+     * The parcel we declare to the courier: outer dimensions in cm.
+     *
+     * Previously hardcoded at 40 x 30 x 6 for every order regardless of contents,
+     * which gave a volumetric weight of 1.44 kg on even a single 8x10 frame and
+     * pushed cheap shipments into an expensive slab. Derived from the largest
+     * item instead, with a packing margin — under-declaring is worse than
+     * over-declaring, because couriers re-measure and surcharge.
+     *
+     * @return array{length: float, breadth: float, height: float}
+     */
+    public function parcel(Order $order): array
     {
-        return max(0.5, $order->items->sum('quantity') * 1.0);
+        $widest = 0.0;
+        $tallest = 0.0;
+        $units = 0;
+
+        foreach ($order->items as $item) {
+            $units += max(1, (int) $item->quantity);
+
+            [$w, $h] = $this->itemFaceCm($item);
+            $widest = max($widest, $w);
+            $tallest = max($tallest, $h);
+        }
+
+        // Fall back to the old default when nothing declares a size, so an
+        // unmeasurable order still ships rather than declaring a 0 cm box.
+        if ($widest <= 0.0 || $tallest <= 0.0) {
+            return ['length' => 40.0, 'breadth' => 30.0, 'height' => 6.0];
+        }
+
+        return [
+            'length' => round($widest + self::PACKING_MARGIN_CM, 1),
+            'breadth' => round($tallest + self::PACKING_MARGIN_CM, 1),
+            // Frames stack flat: one box depth plus a little for each extra unit.
+            'height' => round(self::BOX_DEPTH_CM + (max(0, $units - 1) * self::STACK_DEPTH_CM), 1),
+        ];
+    }
+
+    /**
+     * What the courier actually bills: the greater of real and volumetric weight.
+     *
+     * This was `max(0.5, count($items) * 1.0)` — a flat kilo per line that
+     * ignored both the recorded per-variant weights and the parcel dimensions.
+     * It quoted the customer for 1.0 kg while Shiprocket billed 1.44 kg, so
+     * every order silently undercharged shipping.
+     */
+    public function billableWeightKg(Order $order): float
+    {
+        $actual = $this->actualWeightKg($order);
+        $parcel = $this->parcel($order);
+        $volumetric = ($parcel['length'] * $parcel['breadth'] * $parcel['height']) / self::VOLUMETRIC_DIVISOR;
+
+        return max(self::MIN_BILLABLE_KG, round(max($actual, $volumetric), 2));
+    }
+
+    /** Summed real weight of the contents, from the variants' recorded grams. */
+    private function actualWeightKg(Order $order): float
+    {
+        $grams = 0;
+
+        foreach ($order->items as $item) {
+            $grams += $this->itemGrams($item) * max(1, (int) $item->quantity);
+        }
+
+        return $grams / 1000;
+    }
+
+    /**
+     * Recorded weight of one unit.
+     *
+     * Frame lines carry product_variant_id. Art lines cannot — art is not a
+     * `products` row, so OrderController leaves the FK null and records the
+     * variant id under options instead; reading only the relation would weigh
+     * every art print at the fallback.
+     */
+    private function itemGrams(OrderItem $item): int
+    {
+        if ($item->productVariant?->weight_grams) {
+            return (int) $item->productVariant->weight_grams;
+        }
+
+        $artVariantId = $item->options['art_material_variant_id'] ?? null;
+
+        if ($artVariantId && $variant = ArtMaterialVariant::find($artVariantId)) {
+            return (int) $variant->weight_grams;
+        }
+
+        return self::FALLBACK_ITEM_GRAMS;
+    }
+
+    /**
+     * Face size of one unit in cm, parsed from the variant's `dimensions_cm`
+     * (stored for display as e.g. "20 x 25 cm").
+     *
+     * @return array{0: float, 1: float}
+     */
+    private function itemFaceCm(OrderItem $item): array
+    {
+        $raw = $item->productVariant?->dimensions_cm;
+
+        if (! $raw) {
+            $artVariantId = $item->options['art_material_variant_id'] ?? null;
+            $raw = $artVariantId ? ArtMaterialVariant::find($artVariantId)?->dimensions_cm : null;
+        }
+
+        if (! $raw || ! preg_match('/(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)/', (string) $raw, $m)) {
+            return [0.0, 0.0];
+        }
+
+        return [(float) $m[1], (float) $m[2]];
     }
 }
