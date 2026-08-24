@@ -2,7 +2,7 @@
 
 > **Document Purpose:** The definitive record of the active technology stack for ODSArts and a chronological log of development completed to date — **frontend and backend**. Both stacks now live in one repository and are owned by the same team; see the root `CLAUDE.md` for the working flow.
 >
-> **Status at a glance (Aug 2026):** the platform is feature-complete end to end — browse, product pages, cart, **account checkout** (guest checkout was removed, §3.16), Razorpay payment with failure recording and retry, confirmation email, fulfilment and tracking, with a full Filament admin. All 15 page routes are built and 44 API routes are registered. 5 of 6 data verticals run on Laravel; only custom-framing quotes still use fixtures. Covered by **338 Pest feature tests** and **33 Vitest frontend tests**. What remains before launch is configuration, not code — `DEPLOYMENT.md` is the runbook and `php artisan odsarts:preflight` is the gate. See §3.2b for accepted limitations.
+> **Status at a glance (Aug 2026):** the platform is feature-complete end to end — browse, product pages, cart, **account checkout** (guest checkout was removed, §3.16), Razorpay payment with failure recording and retry, confirmation email, fulfilment and tracking, with a full Filament admin. All 15 page routes are built and 44 API routes are registered. 5 of 6 data verticals run on Laravel; only custom-framing quotes still use fixtures. Covered by **338 Pest feature tests** and **33 Vitest frontend tests**. What remains before launch is configuration, not code — `php artisan odsarts:preflight` is the gate. See §3.2b for accepted limitations.
 
 ---
 
@@ -334,8 +334,7 @@ final cleanup — `price_in_paise` is now published alongside the rupee float, a
 - **Stock is reserved at checkout, not at payment.** An unpaid order holds its
   units until `odsarts:release-abandoned-stock` returns them (default 60
   minutes), so a burst of abandoned carts can briefly show sizes as unavailable.
-  The scheduler cron must be running for this to happen at all — see
-  `DEPLOYMENT.md` §3.6.
+  The scheduler cron must be running for this to happen at all.
 - **Collection hero images and art category covers ship with the frontend
   build**, not the admin. Changing them is a code deploy. Product images and
   collection covers are admin-managed (§3.16).
@@ -852,9 +851,6 @@ already two entry points (`addItem`, `addArtItem`) — and the store exposes
 `canAdd` so the product page asks it rather than re-deriving the rule.
 **Supersedes §3.9's guest checkout.** Orders placed before the change keep
 `user_id = null` and stay trackable by reference.
-
-**`DEPLOYMENT.md`** — the runbook. Forge/VPS for the API, Vercel for the
-storefront, nothing containerised.
 
 **What this cost in lessons**
 

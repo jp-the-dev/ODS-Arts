@@ -71,21 +71,22 @@ gitignored, so it does not travel with the repo — recreate it when cloning.
   serves: **products** and **collections**.
 
 The mock layer is scaffolding for endpoints **we have not built yet**, not a
-permanent fixture. These routes are missing from `backend/routes/api.php`, so pointing
-them at the API returns 404 and breaks the build; each has its own opt-in,
-defaulting to mock, so the app stays green until its backend lands:
+permanent fixture. Three of the four verticals are now live (their routes exist
+in `backend/routes/api.php` and their flags ship as `true` in `.env.local`).
+Only one remains on mock, and it must keep defaulting to mock so the app stays
+green until its backend lands:
 
-| Service | Flag | Backend still to build |
+| Service | Flag | Status |
 |---|---|---|
-| `lib/services/art.ts` | `NEXT_PUBLIC_ART_API_READY` | `/art`, `/art/categories/:slug/products`, `/art/:slug` — needs an `Art` model + migration; art exists only as `lib/mock/art.ts` today |
-| `lib/services/search.ts` | `NEXT_PUBLIC_SEARCH_API_READY` | `/search?q=` across frames + art |
-| `services/orders.service.ts` | `NEXT_PUBLIC_ORDERS_API_READY` | `POST /orders` — needs orders/order-items tables |
-| `services/customFraming.service.ts` | `NEXT_PUBLIC_FRAMING_API_READY` | `POST /custom-framing/quotes` |
+| `lib/services/art.ts` | `NEXT_PUBLIC_ART_API_READY` | **Live** — `/art`, `/art/:slug` |
+| `lib/services/search.ts` | `NEXT_PUBLIC_SEARCH_API_READY` | **Live** — `/search?q=` across frames + art |
+| `services/orders.service.ts` | `NEXT_PUBLIC_ORDERS_API_READY` | **Live** — `POST /orders`, payment + tracking |
+| `services/customFraming.service.ts` | `NEXT_PUBLIC_FRAMING_API_READY` | **To build** — `POST /custom-framing/quotes` (only `/framing/calculate-price` exists) |
 
-Retiring one is a full-stack slice: build the Laravel route, point the service at
-it, flip the flag to `true`, then delete the mock branch and its fixture once
-nothing imports it. Leaving a flag on `true` with no route behind it breaks
-`npm run build`, so land both halves together.
+Retiring the last one is a full-stack slice: build the Laravel route, point the
+service at it, flip the flag to `true`, then delete the mock branch and its
+fixture once nothing imports it. Leaving a flag on `true` with no route behind
+it breaks `npm run build`, so land both halves together.
 
 The mock shapes in `lib/mock/` and the types in `lib/types/` are the de facto
 contract — match them when designing the Eloquent resource, or update both sides

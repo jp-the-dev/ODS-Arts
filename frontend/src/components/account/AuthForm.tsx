@@ -22,7 +22,7 @@ const COPY = {
   register: {
     eyebrow: 'Your Account',
     heading: 'Create your account.',
-    blurb: 'Keep your orders, addresses and wishlist in one place. Checkout works without an account too.',
+    blurb: 'Keep your orders, addresses and wishlist in one place.',
     submit: 'Create account',
     switchPrompt: 'Already have an account?',
     switchLabel: 'Sign in',
@@ -214,14 +214,6 @@ export default function AuthForm({ mode, justReset = false }: Props) {
         <Link href={copy.switchHref} className="text-obsidian border-b border-gold/50 pb-0.5">
           {copy.switchLabel}
         </Link>
-      </p>
-
-      <p className="font-body text-[12px] text-pewter mt-6">
-        You don&apos;t need an account to order —{' '}
-        <Link href="/checkout" className="text-obsidian border-b border-obsidian/20">
-          checkout as a guest
-        </Link>
-        .
       </p>
     </div>
   )

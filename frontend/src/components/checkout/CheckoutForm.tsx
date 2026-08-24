@@ -324,14 +324,14 @@ export default function CheckoutForm({ onPlaced }: CheckoutFormProps = {}) {
         ? `${payment.reason} Nothing has been charged. We have saved your order against`
         : payment?.status === 'pending'
           ? `${payment.reason} We'll email`
-          : "We'll reach out to"
+          : "We couldn't take payment online just now. We'll email"
     const messageTail = paid
       ? '. We\u2019ll be in touch when it ships.'
       : failed
         ? ' so you can try again.'
         : payment?.status === 'pending'
           ? ' with a link to complete your payment.'
-          : ' within 24 hours to confirm your order details and share a payment link.'
+          : ' to complete your order.'
 
     return (
       <motion.div
@@ -779,8 +779,7 @@ export default function CheckoutForm({ onPlaced }: CheckoutFormProps = {}) {
         </motion.button>
 
         <p className="font-body text-[11px] text-center text-pewter leading-relaxed">
-          You won&apos;t be charged online. Our team will confirm your order and share a{' '}
-          <span className="text-obsidian">secure payment link</span> within 24 hours.
+          You&apos;ll pay securely online via Razorpay — UPI, cards and net banking.
         </p>
       </div>
     </form>

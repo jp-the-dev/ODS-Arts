@@ -10,15 +10,14 @@ const FOOTER_LINKS = {
   ],
   about: [
     { label: 'Our Story', href: '/about' },
-    { label: 'Craftsmanship', href: '/#craft' }, // Using hash for homepage section as per standard
-    { label: 'Sustainability', href: '/sustainability' },
-    { label: 'Press', href: '/press' },
+    { label: 'Craftsmanship', href: '/about' },
+    { label: 'Sustainability', href: '/about' },
   ],
   help: [
-    { label: 'Shipping Info', href: '/help/shipping' },
-    { label: 'Returns', href: '/help/returns' },
-    { label: 'Care Guide', href: '/help/care' },
-    { label: 'FAQ', href: '/help/faq' },
+    { label: 'Shipping Info', href: '/about' },
+    { label: 'Returns', href: '/about' },
+    { label: 'Care Guide', href: '/about' },
+    { label: 'FAQ', href: '/about' },
   ],
   follow: [
     { label: 'Instagram', href: 'https://instagram.com/odsarts' },
@@ -212,10 +211,10 @@ export default function Footer() {
             © {new Date().getFullYear()} ODSArts
           </span>
           <div className="flex items-center gap-8 order-1 md:order-2">
-            <Link href="/privacy" className="font-body text-[11px] text-pewter hover:text-ivory tracking-[0.08em] transition-colors">
+            <Link href="/about" className="font-body text-[11px] text-pewter hover:text-ivory tracking-[0.08em] transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="font-body text-[11px] text-pewter hover:text-ivory tracking-[0.08em] transition-colors">
+            <Link href="/about" className="font-body text-[11px] text-pewter hover:text-ivory tracking-[0.08em] transition-colors">
               Terms
             </Link>
           </div>

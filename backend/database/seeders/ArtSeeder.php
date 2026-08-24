@@ -314,10 +314,10 @@ class ArtSeeder extends Seeder
     public function run(): void
     {
         // The catalogue seeders use create(), so a second db:seed would insert
-        // the whole art catalogue again rather than doing nothing — the trap
-        // DEPLOYMENT.md warns about. Skipping when the categories are already
-        // there makes this one safe to re-run, which matters because it is the
-        // seeder most likely to be run again as art content is added.
+        // the whole art catalogue again rather than doing nothing. Skipping when
+        // the categories are already there makes this one safe to re-run, which
+        // matters because it is the seeder most likely to be run again as art
+        // content is added.
         if (ArtCategory::query()->exists()) {
             $this->command?->info('  Art catalogue already seeded — skipping.');
 

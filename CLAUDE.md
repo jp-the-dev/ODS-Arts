@@ -74,13 +74,12 @@ After PHP changes run `vendor/bin/pint --dirty --format agent` and
 
 ## Deploying
 
-`DEPLOYMENT.md` is the runbook: Forge/VPS for the API, Vercel for the storefront,
-both from git — nothing is containerised. Read it before changing anything that
-touches environment configuration, image storage, or the queue.
-
-Two traps it exists to prevent: the frontend's `*_API_READY` flags fall back to
-**mock data** when unset, so a forgotten Vercel variable ships a fake checkout;
-and the seeders use `create()`, so `db:seed` run twice duplicates the catalogue.
+Deployment is Forge/VPS for the API and Vercel for the storefront, both from git
+— nothing is containerised. Before changing anything that touches environment
+configuration, image storage, or the queue, be aware of two traps: the
+frontend's `*_API_READY` flags fall back to **mock data** when unset, so a
+forgotten Vercel variable ships a fake checkout; and the seeders use `create()`,
+so `db:seed` run twice duplicates the catalogue.
 
 Run `php artisan odsarts:preflight` after any environment change — it fails on
 anything that would stop a real order going through.

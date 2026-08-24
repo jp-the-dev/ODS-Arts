@@ -21,6 +21,7 @@ function readyEnvironment(): void
     config()->set('services.shiprocket.email', 'ops@odsarts.in');
     config()->set('services.shiprocket.password', 'secret');
     config()->set('services.shiprocket.dry_run', false);
+    config()->set('services.shiprocket.webhook_token', 'shiprocket-webhook');
 
     Product::factory()->create();
     FrameOption::factory()->create();

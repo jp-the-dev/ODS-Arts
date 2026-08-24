@@ -9,6 +9,7 @@
 
 import { apiFetch, ApiError } from '@/lib/api/client'
 import { MOCK_ART } from '@/lib/mock/art'
+import { artLowestPrice } from '@/lib/types/art'
 import type { ArtProduct, ArtStyle, PrintMaterial } from '@/lib/types/art'
 
 // ── Raw API shapes ────────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ function applyArtFilters(source: ArtProduct[], params: ArtFilterParams): ArtProd
 
   if (params.minPricePaise !== undefined || params.maxPricePaise !== undefined) {
     result = result.filter((a) => {
-      const lowestPrice = Math.min(...a.materialVariants.map((v) => v.pricePaise))
+      const lowestPrice = artLowestPrice(a)
       const min = params.minPricePaise ?? 0
       const max = params.maxPricePaise ?? Infinity
       return lowestPrice >= min && lowestPrice <= max
@@ -136,16 +137,10 @@ function applyArtFilters(source: ArtProduct[], params: ArtFilterParams): ArtProd
 
   switch (params.sort) {
     case 'price_asc':
-      result.sort((a, b) =>
-        Math.min(...a.materialVariants.map((v) => v.pricePaise)) -
-        Math.min(...b.materialVariants.map((v) => v.pricePaise))
-      )
+      result.sort((a, b) => artLowestPrice(a) - artLowestPrice(b))
       break
     case 'price_desc':
-      result.sort((a, b) =>
-        Math.min(...b.materialVariants.map((v) => v.pricePaise)) -
-        Math.min(...a.materialVariants.map((v) => v.pricePaise))
-      )
+      result.sort((a, b) => artLowestPrice(b) - artLowestPrice(a))
       break
     case 'newest':
       result.reverse()

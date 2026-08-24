@@ -128,9 +128,19 @@ export interface ArtProduct {
 
 // ── Art Helpers ───────────────────────────────────────────────────────────────
 
-/** Lowest price across all material+size combos for a given art product */
+/**
+ * Lowest price across all material+size combos for a given art product.
+ *
+ * Sold-out variants are excluded — a print must never advertise "from ₹799"
+ * for a foam-board size that cannot actually be bought. If every variant is
+ * out of stock the cheapest one is still returned so the card can show a
+ * price beside its "sold out" state.
+ */
 export function artLowestPrice(art: ArtProduct): number {
-  return Math.min(...art.materialVariants.map((v) => v.pricePaise))
+  const inStock = art.materialVariants.filter((v) => v.stockQty > 0)
+  const source = inStock.length > 0 ? inStock : art.materialVariants
+  if (source.length === 0) return 0
+  return Math.min(...source.map((v) => v.pricePaise))
 }
 
 /** Get all unique materials available for a product */
