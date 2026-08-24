@@ -8,7 +8,7 @@
  */
 
 import { apiFetch } from '@/lib/api/client'
-import type { CustomFramingQuoteRequest, CustomFramingQuoteResponse } from '@/types'
+import type { CustomFramingQuoteRequest, CustomFramingQuoteResponse } from '@/lib/types/customFraming'
 
 // `POST /custom-framing/quotes` is not implemented on the Laravel side yet, so
 // quote requests stay mocked even when NEXT_PUBLIC_USE_MOCK_DATA=false takes the

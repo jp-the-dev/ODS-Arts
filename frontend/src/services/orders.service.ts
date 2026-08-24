@@ -18,7 +18,7 @@ import { authHeaders } from '@/lib/store/auth'
 import type {
   PlaceOrderRequest,
   PlaceOrderResponse,
-} from '@/types'
+} from '@/lib/types/order'
 import type { CartItem } from '@/lib/types/product'
 
 // `POST /orders` is not implemented on the Laravel side yet, so checkout stays on
